@@ -1,9 +1,9 @@
 import axios from "axios";
-const API_URL = "http://api.bos-games.stamsoft.com:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // Get all users (for finding friends)
 export async function getAllUsers(token: string) {
-  const resp = await axios.get(`${API_URL}/api/users`, {
+  const resp = await axios.get(`${API_BASE_URL}/api/users`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return resp.data.data;
@@ -11,7 +11,7 @@ export async function getAllUsers(token: string) {
 
 // Get current user profile
 export async function getMe(token: string) {
-  const resp = await axios.get(`${API_URL}/api/users/me`, {
+  const resp = await axios.get(`${API_BASE_URL}/api/users/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return resp.data;
@@ -19,13 +19,13 @@ export async function getMe(token: string) {
 
 // Get user by ID
 export async function getUserById(userId: string) {
-  const resp = await axios.get(`${API_URL}/api/users/${userId}`);
+  const resp = await axios.get(`${API_BASE_URL}/api/users/${userId}`);
   return resp.data;
 }
 
 // Get friends list
 export async function getFriends(token: string) {
-  const resp = await axios.get(`${API_URL}/api/friends`, {
+  const resp = await axios.get(`${API_BASE_URL}/api/friends`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return resp.data;
@@ -40,9 +40,12 @@ export async function searchUsers(
   if (searchQuery) params.append("search", searchQuery);
   if (limit) params.append("limit", limit.toString());
 
-  const resp = await axios.get(`${API_URL}/api/users?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const resp = await axios.get(
+    `${API_BASE_URL}/api/users?${params.toString()}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
   return resp.data.data; // Return the data array from paginated response
 }
 
@@ -51,7 +54,7 @@ export async function acceptMatchFromNotification(
   matchId: string
 ) {
   const resp = await axios.post(
-    `${API_URL}/api/match-acceptance/${matchId}/accept`,
+    `${API_BASE_URL}/api/match-acceptance/${matchId}/accept`,
     {},
     { headers: { Authorization: `Bearer ${token}` } }
   );
@@ -63,7 +66,7 @@ export async function declineMatchFromNotification(
   matchId: string
 ) {
   const resp = await axios.post(
-    `${API_URL}/api/match-acceptance/${matchId}/decline`,
+    `${API_BASE_URL}/api/match-acceptance/${matchId}/decline`,
     {},
     { headers: { Authorization: `Bearer ${token}` } }
   );

@@ -1,10 +1,10 @@
 import axios from "axios";
 
-const API_URL = "http://api.bos-games.stamsoft.com:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // 1. Register Account
 export async function registerAccount(email: string, password: string) {
-  const resp = await axios.post(`${API_URL}/api/auth/register/account`, {
+  const resp = await axios.post(`${API_BASE_URL}/api/auth/register/account`, {
     email,
     password,
   });
@@ -16,7 +16,7 @@ export async function registerAccount(email: string, password: string) {
 // 2. Verify Email Code
 export async function verifyEmail(code: string, tempToken: string) {
   const resp = await axios.post(
-    `${API_URL}/api/auth/register/verify-email`,
+    `${API_BASE_URL}/api/auth/register/verify-email`,
     { code },
     { headers: { Authorization: `Bearer ${tempToken}` } }
   );
@@ -33,7 +33,7 @@ export async function registerProfile(
   tempToken: string
 ) {
   const resp = await axios.post(
-    `${API_URL}/api/auth/register/profile`,
+    `${API_BASE_URL}/api/auth/register/profile`,
     { nickname, firstName, lastName },
     { headers: { Authorization: `Bearer ${tempToken}` } }
   );
@@ -45,7 +45,7 @@ export async function registerProfile(
 // 4. Register Country
 export async function registerCountry(country: string, tempToken: string) {
   const resp = await axios.post(
-    `${API_URL}/api/auth/register/country`,
+    `${API_BASE_URL}/api/auth/register/country`,
     { country },
     { headers: { Authorization: `Bearer ${tempToken}` } }
   );
@@ -56,7 +56,7 @@ export async function registerCountry(country: string, tempToken: string) {
 
 // 5. Login
 export async function login(email: string, password: string) {
-  const resp = await axios.post(`${API_URL}/api/auth/login/email`, {
+  const resp = await axios.post(`${API_BASE_URL}/api/auth/login/email`, {
     email,
     password,
   });
@@ -67,7 +67,7 @@ export async function login(email: string, password: string) {
 
 // 6. Get current user
 export async function getMe(token: string) {
-  const resp = await axios.get(`${API_URL}/api/users/me`, {
+  const resp = await axios.get(`${API_BASE_URL}/api/users/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return resp.data;
@@ -76,7 +76,7 @@ export async function getMe(token: string) {
 // 7. Logout
 export async function logout(token: string) {
   const resp = await axios.post(
-    `${API_URL}/api/auth/logout`,
+    `${API_BASE_URL}/api/auth/logout`,
     {},
     { headers: { Authorization: `Bearer ${token}` } }
   );
@@ -85,7 +85,7 @@ export async function logout(token: string) {
 
 // 8. Refresh token
 export async function refreshToken(refreshToken: string) {
-  const resp = await axios.get(`${API_URL}/api/auth/refresh`, {
+  const resp = await axios.get(`${API_BASE_URL}/api/auth/refresh`, {
     headers: { Authorization: `Bearer ${refreshToken}` },
   });
   const token = resp.data.access_token;
@@ -95,12 +95,12 @@ export async function refreshToken(refreshToken: string) {
 // 9. Steam Login - Desktop
 export function steamLogin() {
   // Redirect to Steam OAuth
-  window.location.href = `${API_URL}/api/auth/login/steam`;
+  window.location.href = `${API_BASE_URL}/api/auth/login/steam`;
 }
 
 // 10. Steam Login - Mobile
 export async function steamLoginMobile() {
-  const resp = await axios.get(`${API_URL}/api/auth/login/steam/mobile`);
+  const resp = await axios.get(`${API_BASE_URL}/api/auth/login/steam/mobile`);
   return resp.data;
 }
 
