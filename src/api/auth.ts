@@ -121,3 +121,20 @@ export async function handleSocialAuthCallback(
 
   return { user };
 }
+
+// 12. Validate access token
+export async function validateAccessToken(accessToken: string) {
+  try {
+    // Try to get user data with the provided token
+    const user = await getMe(accessToken);
+
+    // If successful, store the token and user data
+    sessionStorage.setItem("token", accessToken);
+    sessionStorage.setItem("user", JSON.stringify(user));
+
+    return { user, success: true };
+  } catch (error) {
+    // Token is invalid
+    return { success: false, error };
+  }
+}
