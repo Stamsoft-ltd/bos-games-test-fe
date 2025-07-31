@@ -61,7 +61,10 @@ export default function App() {
 
   // Initialize push notifications when user is authenticated
   useEffect(() => {
+    console.log("Push notification initialization check:", { isAuthenticated, hasToken: !!token });
+    
     if (isAuthenticated && token) {
+      console.log("Starting push notification initialization...");
       const pushService = PushNotificationService.getInstance();
       pushService
         .initialize(token)
@@ -77,6 +80,8 @@ export default function App() {
         .catch((error) => {
           console.error("Error initializing push notifications:", error);
         });
+    } else {
+      console.log("Skipping push notification initialization - not authenticated or no token");
     }
   }, [isAuthenticated, token]);
 

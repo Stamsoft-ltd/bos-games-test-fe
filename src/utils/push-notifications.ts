@@ -108,6 +108,7 @@ export class PushNotificationService {
 
   async subscribeToPush(authToken: string): Promise<string | null> {
     console.log("Subscribing to push notifications...");
+    console.log("Auth token available:", !!authToken);
 
     if (!this.messaging) {
       console.error("Firebase messaging not initialized");
@@ -126,9 +127,23 @@ export class PushNotificationService {
       if (token) {
         console.log("Firebase messaging token obtained:", token);
         console.log("Sending push token to backend:", token);
-        await setPushToken(token, authToken);
-        console.log("Push token registered successfully:", token);
-        return token;
+        console.log("API URL being used:", import.meta.env.VITE_API_URL);
+        
+        try {
+          await setPushToken(token, authToken);
+          console.log("Push token registered successfully:", token);
+          return token;
+        } catch (apiError) {
+          console.error("Failed to send push token to backend:", apiError);
+          console.error("API Error details:", {
+            name: apiError.name,
+            message: apiError.message,
+            response: apiError.response?.data,
+            status: apiError.response?.status,
+          });
+          // Still return the token even if backend registration fails
+          return token;
+        }
       } else {
         console.error("Failed to get Firebase messaging token");
       }
