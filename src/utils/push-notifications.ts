@@ -110,12 +110,64 @@ export class PushNotificationService {
               matchId: payload.data.matchId,
               serverIp: payload.data.serverIp,
               serverPort: payload.data.serverPort,
+              selectedMap: payload.data.selectedMap,
+            },
+          });
+          window.dispatchEvent(event);
+        } else if (
+          payload.data?.action === "map_banning_started" &&
+          payload.data?.matchId
+        ) {
+          console.log(
+            "Foreground map banning started notification received, triggering map banning modal"
+          );
+
+          // Dispatch a custom event that the main app can listen to
+          const event = new CustomEvent("matchFound", {
+            detail: {
+              type: "MAP_BANNING_STARTED",
+              matchId: payload.data.matchId,
+            },
+          });
+          window.dispatchEvent(event);
+        } else if (
+          payload.data?.action === "map_banned" &&
+          payload.data?.matchId
+        ) {
+          console.log(
+            "Foreground map banned notification received, updating map banning modal"
+          );
+
+          // Dispatch a custom event that the main app can listen to
+          const event = new CustomEvent("matchFound", {
+            detail: {
+              type: "MAP_BANNED",
+              matchId: payload.data.matchId,
+              bannedMap: payload.data.bannedMap,
+              remainingMaps: payload.data.remainingMaps,
+            },
+          });
+          window.dispatchEvent(event);
+        } else if (
+          payload.data?.action === "map_banning_complete" &&
+          payload.data?.matchId
+        ) {
+          console.log(
+            "Foreground map banning complete notification received, closing map banning modal"
+          );
+
+          // Dispatch a custom event that the main app can listen to
+          const event = new CustomEvent("matchFound", {
+            detail: {
+              type: "MAP_BANNING_COMPLETE",
+              matchId: payload.data.matchId,
+              selectedMap: payload.data.selectedMap,
             },
           });
           window.dispatchEvent(event);
         } else {
           console.log(
-            "Foreground message received but not a match acceptance or match started notification"
+            "Foreground message received but not a match acceptance, match started, or map banning notification"
           );
         }
       });

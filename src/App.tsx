@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getMe } from "./api/auth";
 import {
   acceptMatchFromNotification,
@@ -10,6 +10,7 @@ import { PushNotificationService } from "./utils/push-notifications";
 import NotificationBadge from "./components/NotificationBadge";
 import MatchAcceptanceModal from "./components/MatchAcceptanceModal";
 import ServerConnectionModal from "./components/ServerConnectionModal";
+import MapBanningModal from "./components/MapBanningModal";
 import { DeviceIdDisplay } from "./components/DeviceIdDisplay";
 import { BackgroundMessageTest } from "./utils/background-message-test";
 import Register from "./pages/Register";
@@ -20,11 +21,17 @@ import Teams from "./pages/Teams";
 import Parties from "./pages/Parties";
 import Notifications from "./pages/Notifications";
 import SocialAuth from "./pages/SocialAuth";
+import {
+  MapBanSession,
+  getMapBanSession,
+  handleBanTimeout,
+} from "./api/map-banning";
 
 export default function App() {
   const token = sessionStorage.getItem("token");
   const isAuthenticated = !!token;
   const [userNickname, setUserNickname] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const [matchAcceptance, setMatchAcceptance] = useState<{
     matchId: string;
     isVisible: boolean;
@@ -33,9 +40,27 @@ export default function App() {
 
   const [serverConnection, setServerConnection] = useState<{
     matchId: string;
-    serverIp: string;
-    serverPort: number;
+    serverIp?: string;
+    serverPort?: number;
+    selectedMap?: string;
     isVisible: boolean;
+    isLoadingConnectionDetails?: boolean;
+  } | null>(null);
+
+  const [mapBanning, setMapBanning] = useState<{
+    matchId: string;
+    session: MapBanSession | null;
+    isVisible: boolean;
+  } | null>(null);
+
+  // Ref to track current server connection modal state
+  const serverConnectionRef = useRef<{
+    matchId: string;
+    serverIp?: string;
+    serverPort?: number;
+    selectedMap?: string;
+    isVisible: boolean;
+    isLoadingConnectionDetails?: boolean;
   } | null>(null);
 
   // Get user nickname from API
@@ -47,6 +72,7 @@ export default function App() {
           .then((user) => {
             console.log("user", user);
             setUserNickname(user.nickname || "");
+            setUserId(user.id || "");
           })
           .catch((error) => {
             console.error("Error fetching user data:", error);
@@ -54,9 +80,11 @@ export default function App() {
           });
       } else {
         setUserNickname("");
+        setUserId("");
       }
     } else {
       setUserNickname("");
+      setUserId("");
     }
   }, [isAuthenticated]);
 
@@ -90,45 +118,6 @@ export default function App() {
       );
     }
   }, [isAuthenticated, token]);
-
-  // Test function to check service worker status
-  const testServiceWorker = async () => {
-    if (!token) {
-      console.warn("No auth token available");
-      return;
-    }
-
-    const pushService = PushNotificationService.getInstance();
-    const isWorking = await pushService.testServiceWorker();
-    console.log("Service worker test result:", isWorking);
-
-    if ("Notification" in window) {
-      console.log("Notification permission:", Notification.permission);
-    }
-
-    if ("serviceWorker" in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      console.log("Service worker registrations:", registrations);
-    }
-  };
-
-  // Test function to simulate background message modal triggering
-  const testBackgroundMessageModal = async () => {
-    console.log("Testing message modal triggering...");
-
-    // Test foreground message handling first
-    await BackgroundMessageTest.testForegroundMessage();
-
-    // Wait a moment, then test background message handling
-    setTimeout(async () => {
-      await BackgroundMessageTest.testBasicModalTriggering();
-    }, 2000);
-
-    // Wait a moment, then test match started notification
-    setTimeout(async () => {
-      await BackgroundMessageTest.testMatchStartedNotification();
-    }, 4000);
-  };
 
   // Handle service worker messages for match acceptance
   useEffect(() => {
@@ -191,15 +180,206 @@ export default function App() {
           });
         } else if (event.data.type === "MATCH_STARTED" && event.data.matchId) {
           console.log(
-            "Match started, showing server connection modal:",
+            "Match started, updating server connection modal:",
             event.data.matchId
           );
-          // Show server connection modal
+          console.log("Current server connection state:", serverConnection);
+          console.log(
+            "Current server connection ref:",
+            serverConnectionRef.current
+          );
+
+          // Check if we already have a modal for this match using ref for reliability
+          const existingModal =
+            serverConnectionRef.current &&
+            serverConnectionRef.current.matchId === event.data.matchId;
+          console.log("Existing modal found:", existingModal);
+
+          if (existingModal) {
+            // Update existing modal with connection details
+            console.log(
+              "✅ UPDATING existing server connection modal with details"
+            );
+            const updatedModal = {
+              matchId: serverConnectionRef.current!.matchId,
+              serverIp: event.data.serverIp,
+              serverPort: event.data.serverPort,
+              selectedMap: serverConnectionRef.current!.selectedMap,
+              isLoadingConnectionDetails: false,
+              isVisible: true, // Ensure it stays visible
+            };
+            console.log("Updated modal state:", updatedModal);
+            setServerConnection(updatedModal);
+          } else {
+            // Create new modal if none exists
+            console.log("🆕 CREATING new server connection modal");
+            const newModal = {
+              matchId: event.data.matchId,
+              serverIp: event.data.serverIp,
+              serverPort: event.data.serverPort,
+              selectedMap: event.data.selectedMap,
+              isVisible: true,
+              isLoadingConnectionDetails: false,
+            };
+            console.log("New modal state:", newModal);
+            setServerConnection(newModal);
+          }
+        } else if (
+          event.data.type === "MAP_BANNING_STARTED" &&
+          event.data.matchId
+        ) {
+          console.log(
+            "Map banning started, showing map banning modal:",
+            event.data.matchId
+          );
+          console.log("Map banning event data:", event.data);
+          // Show map banning modal
+          setMapBanning({
+            matchId: event.data.matchId,
+            session: null, // Will be fetched via polling
+            isVisible: true,
+          });
+        } else if (event.data.type === "MAP_BANNED" && event.data.matchId) {
+          console.log(
+            "Map banned, updating map banning modal:",
+            event.data.matchId
+          );
+          console.log("Map banned event data:", event.data);
+
+          // Fetch the updated session from backend to get the complete state
+          if (token) {
+            console.log(
+              "Fetching updated session for match:",
+              event.data.matchId
+            );
+
+            // Add retry logic for session fetching
+            const fetchSessionWithRetry = async (retries = 3, delay = 1000) => {
+              for (let i = 0; i < retries; i++) {
+                try {
+                  const updatedSession = await getMapBanSession(
+                    event.data.matchId,
+                    token
+                  );
+                  console.log(
+                    "Fetched updated session after map ban:",
+                    updatedSession
+                  );
+                  console.log("Updated session details:", {
+                    currentLeaderIndex: updatedSession?.currentLeaderIndex,
+                    leaderIds: updatedSession?.leaderIds,
+                    currentLeader:
+                      updatedSession?.leaderIds?.[
+                        updatedSession?.currentLeaderIndex
+                      ],
+                    availableMaps: updatedSession?.availableMaps,
+                    bannedMaps: updatedSession?.bannedMaps,
+                    isComplete: updatedSession?.isComplete,
+                  });
+
+                  setMapBanning((prev) => {
+                    if (prev && prev.matchId === event.data.matchId) {
+                      console.log(
+                        "Updating map banning modal with new session"
+                      );
+                      return {
+                        ...prev,
+                        session: updatedSession,
+                      };
+                    }
+                    console.log(
+                      "No matching map banning modal found for match:",
+                      event.data.matchId
+                    );
+                    return prev;
+                  });
+                  return; // Success, exit retry loop
+                } catch (error) {
+                  console.error(
+                    `Error fetching updated session after map ban (attempt ${
+                      i + 1
+                    }/${retries}):`,
+                    error
+                  );
+                  if (i < retries - 1) {
+                    console.log(`Retrying in ${delay}ms...`);
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                    delay *= 2; // Exponential backoff
+                  }
+                }
+              }
+
+              // If all retries failed, use fallback logic
+              console.log("All retries failed, using fallback logic");
+              setMapBanning((prev) => {
+                if (
+                  prev &&
+                  prev.matchId === event.data.matchId &&
+                  prev.session
+                ) {
+                  // Parse remainingMaps from JSON string to array
+                  let remainingMapsArray: string[] = [];
+                  try {
+                    remainingMapsArray = JSON.parse(event.data.remainingMaps);
+                  } catch (error) {
+                    console.error("Error parsing remainingMaps:", error);
+                    remainingMapsArray = [];
+                  }
+
+                  const updatedSession = {
+                    ...prev.session,
+                    availableMaps: remainingMapsArray,
+                    currentLeaderIndex: event.data.currentLeaderIndex || 0,
+                    bannedMaps: prev.session.bannedMaps?.includes(
+                      event.data.bannedMap
+                    )
+                      ? prev.session.bannedMaps
+                      : [
+                          ...(prev.session.bannedMaps || []),
+                          event.data.bannedMap,
+                        ],
+                  };
+
+                  console.log("Using fallback session update:", updatedSession);
+                  return {
+                    ...prev,
+                    session: updatedSession,
+                  };
+                }
+                return prev;
+              });
+            };
+
+            // Execute the retry logic
+            fetchSessionWithRetry();
+          }
+        } else if (
+          event.data.type === "MAP_BANNING_COMPLETE" &&
+          event.data.matchId
+        ) {
+          console.log(
+            "Map banning complete, showing server connection modal:",
+            event.data.matchId
+          );
+          console.log("Map banning complete event data:", event.data);
+
+          // Clear any stored map banning data from service worker
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: "CLEAR_MAP_BANNING_DATA",
+              matchId: event.data.matchId,
+            });
+          }
+
+          // Close map banning modal
+          setMapBanning(null);
+
+          // Show server connection modal with selected map and loading state for all users
           setServerConnection({
             matchId: event.data.matchId,
-            serverIp: event.data.serverIp,
-            serverPort: event.data.serverPort,
+            selectedMap: event.data.selectedMap,
             isVisible: true,
+            isLoadingConnectionDetails: true,
           });
         }
       } catch (error) {
@@ -222,14 +402,218 @@ export default function App() {
       if (event.detail && event.detail.matchId) {
         if (event.detail.type === "MATCH_STARTED") {
           console.log(
-            "Showing server connection modal for foreground match started message:",
+            "Updating server connection modal for foreground match started message:",
             event.detail.matchId
           );
+          console.log(
+            "Current server connection state (foreground):",
+            serverConnection
+          );
+
+          // Check if we already have a modal for this match
+          const existingModal =
+            serverConnection &&
+            serverConnection.matchId === event.detail.matchId;
+          console.log("Existing modal found (foreground):", existingModal);
+
+          if (existingModal) {
+            // Update existing modal with connection details
+            console.log(
+              "✅ UPDATING existing server connection modal with details (foreground)"
+            );
+            setServerConnection({
+              ...serverConnection,
+              serverIp: event.detail.serverIp,
+              serverPort: event.detail.serverPort,
+              isLoadingConnectionDetails: false,
+              isVisible: true, // Ensure it stays visible
+            });
+          } else {
+            // Create new modal if none exists
+            console.log("🆕 CREATING new server connection modal (foreground)");
+            setServerConnection({
+              matchId: event.detail.matchId,
+              serverIp: event.detail.serverIp,
+              serverPort: event.detail.serverPort,
+              selectedMap: event.detail.selectedMap,
+              isVisible: true,
+              isLoadingConnectionDetails: false,
+            });
+          }
+        } else if (event.detail.type === "MAP_BANNING_STARTED") {
+          console.log(
+            "Showing map banning modal for foreground map banning message:",
+            event.detail.matchId
+          );
+          // Fetch initial session data
+          if (token) {
+            getMapBanSession(event.detail.matchId, token)
+              .then((session) => {
+                setMapBanning({
+                  matchId: event.detail.matchId,
+                  session: session,
+                  isVisible: true,
+                });
+              })
+              .catch((error) => {
+                console.error(
+                  "Error fetching initial map banning session:",
+                  error
+                );
+                setMapBanning({
+                  matchId: event.detail.matchId,
+                  session: null,
+                  isVisible: true,
+                });
+              });
+          } else {
+            setMapBanning({
+              matchId: event.detail.matchId,
+              session: null,
+              isVisible: true,
+            });
+          }
+        } else if (event.detail.type === "MAP_BANNED") {
+          console.log(
+            "Updating map banning modal for foreground map banned message:",
+            event.detail.matchId
+          );
+
+          // Fetch the updated session from backend to get the complete state
+          if (token) {
+            console.log(
+              "Fetching updated session for match (foreground):",
+              event.detail.matchId
+            );
+
+            // Add retry logic for session fetching (same as background)
+            const fetchSessionWithRetry = async (retries = 3, delay = 1000) => {
+              for (let i = 0; i < retries; i++) {
+                try {
+                  const updatedSession = await getMapBanSession(
+                    event.detail.matchId,
+                    token
+                  );
+                  console.log(
+                    "Fetched updated session after map ban (foreground):",
+                    updatedSession
+                  );
+                  console.log("Updated session details (foreground):", {
+                    currentLeaderIndex: updatedSession?.currentLeaderIndex,
+                    leaderIds: updatedSession?.leaderIds,
+                    currentLeader:
+                      updatedSession?.leaderIds?.[
+                        updatedSession?.currentLeaderIndex
+                      ],
+                    availableMaps: updatedSession?.availableMaps,
+                    bannedMaps: updatedSession?.bannedMaps,
+                    isComplete: updatedSession?.isComplete,
+                  });
+
+                  setMapBanning((prev) => {
+                    if (prev && prev.matchId === event.detail.matchId) {
+                      console.log(
+                        "Updating map banning modal with new session (foreground)"
+                      );
+                      return {
+                        ...prev,
+                        session: updatedSession,
+                      };
+                    }
+                    console.log(
+                      "No matching map banning modal found for match (foreground):",
+                      event.detail.matchId
+                    );
+                    return prev;
+                  });
+                  return; // Success, exit retry loop
+                } catch (error) {
+                  console.error(
+                    `Error fetching updated session after map ban (foreground, attempt ${
+                      i + 1
+                    }/${retries}):`,
+                    error
+                  );
+                  if (i < retries - 1) {
+                    console.log(`Retrying in ${delay}ms...`);
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                    delay *= 2; // Exponential backoff
+                  }
+                }
+              }
+
+              // If all retries failed, use fallback logic
+              console.log(
+                "All retries failed, using fallback logic (foreground)"
+              );
+              setMapBanning((prev) => {
+                if (
+                  prev &&
+                  prev.matchId === event.detail.matchId &&
+                  prev.session
+                ) {
+                  // Parse remainingMaps from JSON string to array
+                  let remainingMapsArray: string[] = [];
+                  try {
+                    remainingMapsArray = JSON.parse(event.detail.remainingMaps);
+                  } catch (error) {
+                    console.error("Error parsing remainingMaps:", error);
+                    remainingMapsArray = [];
+                  }
+
+                  const updatedSession = {
+                    ...prev.session,
+                    availableMaps: remainingMapsArray,
+                    currentLeaderIndex: event.detail.currentLeaderIndex || 0,
+                    bannedMaps: prev.session.bannedMaps?.includes(
+                      event.detail.bannedMap
+                    )
+                      ? prev.session.bannedMaps
+                      : [
+                          ...(prev.session.bannedMaps || []),
+                          event.detail.bannedMap,
+                        ],
+                  };
+
+                  console.log(
+                    "Using fallback session update (foreground):",
+                    updatedSession
+                  );
+                  return {
+                    ...prev,
+                    session: updatedSession,
+                  };
+                }
+                return prev;
+              });
+            };
+
+            // Execute the retry logic
+            fetchSessionWithRetry();
+          }
+        } else if (event.detail.type === "MAP_BANNING_COMPLETE") {
+          console.log(
+            "Closing map banning modal for foreground map banning complete message:",
+            event.detail.matchId
+          );
+
+          // Clear any stored map banning data from service worker
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: "CLEAR_MAP_BANNING_DATA",
+              matchId: event.detail.matchId,
+            });
+          }
+
+          // Close map banning modal
+          setMapBanning(null);
+
+          // Show server connection modal with selected map and loading state for all users
           setServerConnection({
             matchId: event.detail.matchId,
-            serverIp: event.detail.serverIp,
-            serverPort: event.detail.serverPort,
+            selectedMap: event.detail.selectedMap,
             isVisible: true,
+            isLoadingConnectionDetails: true,
           });
         } else {
           console.log(
@@ -313,8 +697,21 @@ export default function App() {
           // Create a message channel to communicate with service worker
           const messageChannel = new MessageChannel();
 
-          messageChannel.port1.onmessage = (event) => {
+          // Add timeout to prevent waiting indefinitely
+          const timeout = setTimeout(() => {
+            console.log("Timeout waiting for service worker response");
+            messageChannel.port1.close();
+          }, 5000); // 5 second timeout
+
+          messageChannel.port1.onmessage = async (event) => {
+            clearTimeout(timeout);
             console.log("Received response from service worker:", event.data);
+            console.log("Response data type:", typeof event.data);
+            console.log(
+              "Response data structure:",
+              JSON.stringify(event.data, null, 2)
+            );
+
             if (event.data && event.data.type === "MATCH_FOUND") {
               console.log(
                 "Found pending match data, showing modal:",
@@ -327,27 +724,160 @@ export default function App() {
               });
             } else if (event.data && event.data.type === "MATCH_STARTED") {
               console.log(
-                "Found pending match started data, showing server connection modal:",
+                "Found pending match started data, updating server connection modal:",
                 event.data
               );
+              console.log(
+                "Current server connection state (pending):",
+                serverConnection
+              );
+
+              // Check if we already have a modal for this match
+              const existingModal =
+                serverConnection &&
+                serverConnection.matchId === event.data.matchId;
+              console.log("Existing modal found (pending):", existingModal);
+
+              if (existingModal) {
+                // Update existing modal with connection details
+                console.log(
+                  "✅ UPDATING existing server connection modal with pending details"
+                );
+                setServerConnection({
+                  ...serverConnection,
+                  serverIp: event.data.serverIp,
+                  serverPort: event.data.serverPort,
+                  isLoadingConnectionDetails: false,
+                  isVisible: true, // Ensure it stays visible
+                });
+              } else {
+                // Create new modal if none exists
+                console.log(
+                  "🆕 CREATING new server connection modal with pending details"
+                );
+                setServerConnection({
+                  matchId: event.data.matchId,
+                  serverIp: event.data.serverIp,
+                  serverPort: event.data.serverPort,
+                  selectedMap: event.data.selectedMap,
+                  isVisible: true,
+                  isLoadingConnectionDetails: false,
+                });
+              }
+            } else if (
+              event.data &&
+              event.data.type === "MAP_BANNING_STARTED"
+            ) {
+              console.log(
+                "Found pending map banning data, showing map banning modal:",
+                event.data
+              );
+              // Fetch the initial session data
+              if (token) {
+                try {
+                  const session = await getMapBanSession(
+                    event.data.matchId,
+                    token
+                  );
+                  console.log("Fetched map banning session:", session);
+                  console.log("Current user ID:", userId);
+                  console.log("Session leader IDs:", session?.leaderIds);
+                  console.log(
+                    "Current leader index:",
+                    session?.currentLeaderIndex
+                  );
+                  console.log(
+                    "Is current user's turn:",
+                    session?.leaderIds[session?.currentLeaderIndex || 0] ===
+                      userId
+                  );
+                  setMapBanning({
+                    matchId: event.data.matchId,
+                    session: session,
+                    isVisible: true,
+                  });
+                } catch (error) {
+                  console.error("Error fetching map banning session:", error);
+                  // Still show modal even if session fetch fails
+                  setMapBanning({
+                    matchId: event.data.matchId,
+                    session: null,
+                    isVisible: true,
+                  });
+                }
+              } else {
+                console.log(
+                  "No token available for fetching map banning session"
+                );
+                setMapBanning({
+                  matchId: event.data.matchId,
+                  session: null,
+                  isVisible: true,
+                });
+              }
+            } else if (event.data && event.data.type === "MAP_BANNED") {
+              console.log(
+                "Found pending map banned data, updating map banning modal:",
+                event.data
+              );
+              // Fetch the updated session data
+              if (token) {
+                try {
+                  const session = await getMapBanSession(
+                    event.data.matchId,
+                    token
+                  );
+                  console.log(
+                    "Fetched updated session after map ban:",
+                    session
+                  );
+                  setMapBanning((prev) => {
+                    if (prev && prev.matchId === event.data.matchId) {
+                      return {
+                        ...prev,
+                        session: session,
+                      };
+                    }
+                    return prev;
+                  });
+                } catch (error) {
+                  console.error(
+                    "Error fetching updated session after map ban:",
+                    error
+                  );
+                }
+              }
+            } else if (
+              event.data &&
+              event.data.type === "MAP_BANNING_COMPLETE"
+            ) {
+              console.log(
+                "Found pending map banning complete data, showing server connection modal:",
+                event.data
+              );
+
+              // Close map banning modal if it's open
+              setMapBanning(null);
+
+              // Show server connection modal with selected map and loading state for all users
               setServerConnection({
                 matchId: event.data.matchId,
-                serverIp: event.data.serverIp,
-                serverPort: event.data.serverPort,
+                selectedMap: event.data.selectedMap,
                 isVisible: true,
+                isLoadingConnectionDetails: true,
               });
             } else {
               console.log(
                 "No pending match data found or invalid data:",
                 event.data
               );
+              console.log(
+                "Event data is null/undefined:",
+                event.data === null || event.data === undefined
+              );
             }
           };
 
-          // Send message to service worker to check for pending match data
-          console.log(
-            "Sending CHECK_PENDING_MATCH message to active service worker"
-          );
           registration.active.postMessage({ type: "CHECK_PENDING_MATCH" }, [
             messageChannel.port2,
           ]);
@@ -392,6 +922,25 @@ export default function App() {
       window.removeEventListener("focus", handleFocus);
     };
   }, [token]);
+
+  // Debug useEffect to track server connection modal state changes
+  useEffect(() => {
+    console.log("🔄 Server connection modal state changed:", serverConnection);
+    if (serverConnection) {
+      console.log("📊 Modal details:", {
+        matchId: serverConnection.matchId,
+        serverIp: serverConnection.serverIp,
+        serverPort: serverConnection.serverPort,
+        selectedMap: serverConnection.selectedMap,
+        isVisible: serverConnection.isVisible,
+        isLoadingConnectionDetails: serverConnection.isLoadingConnectionDetails,
+      });
+      // Update ref with current state
+      serverConnectionRef.current = serverConnection;
+    } else {
+      serverConnectionRef.current = null;
+    }
+  }, [serverConnection]);
 
   // Handle match acceptance modal actions
   const handleMatchAccept = async () => {
@@ -455,6 +1004,7 @@ export default function App() {
 
   const handleServerConnectionClose = () => {
     console.log("Server connection modal closed");
+    console.log("Closing modal with state:", serverConnection);
     setServerConnection(null);
   };
 
@@ -462,6 +1012,35 @@ export default function App() {
     console.log("Connection info copied to clipboard");
     // You could show a toast notification here
   };
+
+  // Map banning handlers
+  const handleMapBanningTimeout = async () => {
+    if (!mapBanning || !token) return;
+
+    try {
+      console.log("Map banning timed out, handling timeout...");
+      await handleBanTimeout(mapBanning.matchId, token);
+      // The session will be updated via polling or websocket
+    } catch (error) {
+      console.error("Error handling map banning timeout:", error);
+    }
+  };
+
+  const handleMapSelected = (selectedMap: string) => {
+    console.log("Map selected:", selectedMap);
+    // The session will be updated via polling or websocket
+  };
+
+  const handleMapBanningClose = () => {
+    console.log("Map banning modal closed");
+    setMapBanning(null);
+  };
+
+  // TESTING: Fully relying on push notifications for real-time updates
+  // Removed polling mechanism to test if push notifications alone can handle all state synchronization
+  // This will help determine if push notifications are reliable enough for production use
+
+  // Real-time updates are handled via notifications instead of polling
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -501,20 +1080,6 @@ export default function App() {
                 Notifications
                 <NotificationBadge className="absolute -top-1 -right-1" />
               </Link>
-              <button
-                onClick={testServiceWorker}
-                className="text-indigo-500 hover:underline text-sm"
-                title="Test Service Worker"
-              >
-                🔧 Test SW
-              </button>
-              <button
-                onClick={testBackgroundMessageModal}
-                className="text-indigo-500 hover:underline text-sm"
-                title="Test Background Message Modal"
-              >
-                🎯 Test BG Modal
-              </button>
             </>
           ) : (
             <>
@@ -566,8 +1131,25 @@ export default function App() {
           serverIp={serverConnection.serverIp}
           serverPort={serverConnection.serverPort}
           matchId={serverConnection.matchId}
+          selectedMap={serverConnection.selectedMap}
+          isLoadingConnectionDetails={
+            serverConnection.isLoadingConnectionDetails
+          }
           onClose={handleServerConnectionClose}
           onCopyConnectionInfo={handleCopyConnectionInfo}
+        />
+      )}
+
+      {/* Map Banning Modal */}
+      {mapBanning && (
+        <MapBanningModal
+          isVisible={mapBanning.isVisible}
+          session={mapBanning.session}
+          currentUserId={userId} // Using actual user ID
+          token={token || ""}
+          onMapSelected={handleMapSelected}
+          onTimeout={handleMapBanningTimeout}
+          onClose={handleMapBanningClose}
         />
       )}
 

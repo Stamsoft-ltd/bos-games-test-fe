@@ -6,6 +6,50 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"
 );
 
+// Persistent storage for service worker data
+const SW_STORAGE_KEY = "bos-games-sw-data";
+
+// Helper functions for persistent storage
+const swStorage = {
+  async get(key) {
+    try {
+      const result = await caches.open("sw-storage");
+      const response = await result.match(key);
+      if (response) {
+        const data = await response.json();
+        console.log("Data retrieved from storage:", key, data);
+        return data;
+      }
+      console.log("No data found in storage for key:", key);
+      return null;
+    } catch (error) {
+      console.log("Error reading from storage:", error);
+      return null;
+    }
+  },
+
+  async set(key, value) {
+    try {
+      const cache = await caches.open("sw-storage");
+      const response = new Response(JSON.stringify(value));
+      await cache.put(key, response);
+      console.log("Data stored successfully:", key, value);
+    } catch (error) {
+      console.log("Error writing to storage:", error);
+    }
+  },
+
+  async delete(key) {
+    try {
+      const cache = await caches.open("sw-storage");
+      await cache.delete(key);
+      console.log("Data deleted successfully:", key);
+    } catch (error) {
+      console.log("Error deleting from storage:", error);
+    }
+  },
+};
+
 // Firebase configuration - this should match your web app config
 firebase.initializeApp({
   apiKey: "AIzaSyDUsEFOdlNO8muiTUx0Em65KY59Da_V_3A",
@@ -20,12 +64,13 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Handle background messages
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(async (payload) => {
   console.log("Received background message:", payload);
   console.log("Payload data:", payload.data);
   console.log("Payload notification:", payload.notification);
   console.log("Action check:", payload.data?.action);
   console.log("MatchId check:", payload.data?.matchId);
+  console.log("Full payload structure:", JSON.stringify(payload, null, 2));
 
   const notificationTitle = payload.notification?.title || "BOS Games";
   const notificationOptions = {
@@ -128,9 +173,14 @@ messaging.onBackgroundMessage((payload) => {
       timestamp: Date.now(),
     };
 
-    // Store in service worker memory for persistence
-    self.matchDataForModal = matchData;
-    console.log("Match data for modal:", self.matchDataForModal);
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("matchDataForModal", matchData);
+    console.log("Match data for modal:", matchData);
+    console.log("Stored matchDataForModal in persistent storage:", {
+      hasData: true,
+      data: matchData,
+      timestamp: Date.now(),
+    });
     // Also try to send message to any active clients immediately
     const messagePromise = clients.matchAll().then(function (clientList) {
       clientList.forEach(function (client) {
@@ -156,11 +206,12 @@ messaging.onBackgroundMessage((payload) => {
       matchId: payload.data.matchId,
       serverIp: payload.data.serverIp,
       serverPort: payload.data.serverPort,
+      selectedMap: payload.data.selectedMap,
       timestamp: Date.now(),
     };
 
-    // Store in service worker memory for persistence
-    self.matchStartedDataForModal = matchStartedData;
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("matchStartedDataForModal", matchStartedData);
 
     // Also try to send message to any active clients immediately
     const messagePromise = clients.matchAll().then(function (clientList) {
@@ -169,6 +220,103 @@ messaging.onBackgroundMessage((payload) => {
           "Sending MATCH_STARTED message to active client for server connection modal display"
         );
         client.postMessage(matchStartedData);
+      });
+    });
+
+    return Promise.all([notificationPromise, messagePromise]);
+  }
+
+  // If this is a map banning started notification, also send a message to the app to show the map banning modal
+  if (payload.data?.action === "map_banning_started" && payload.data?.matchId) {
+    console.log(
+      "Background map banning started notification received, will trigger map banning modal when app becomes active"
+    );
+
+    // Store the map banning data for when the app becomes active
+    const mapBanningData = {
+      type: "MAP_BANNING_STARTED",
+      matchId: payload.data.matchId,
+      timestamp: Date.now(),
+    };
+
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("mapBanningDataForModal", mapBanningData);
+
+    // Also try to send message to any active clients immediately
+    const messagePromise = clients.matchAll().then(function (clientList) {
+      clientList.forEach(function (client) {
+        console.log(
+          "Sending MAP_BANNING_STARTED message to active client for map banning modal display"
+        );
+        client.postMessage(mapBanningData);
+      });
+    });
+
+    return Promise.all([notificationPromise, messagePromise]);
+  }
+
+  // If this is a map banned notification, send a message to update the modal
+  if (payload.data?.action === "map_banned" && payload.data?.matchId) {
+    console.log(
+      "Background map banned notification received, will update map banning modal when app becomes active"
+    );
+
+    // Store the map banned data for when the app becomes active
+    const mapBannedData = {
+      type: "MAP_BANNED",
+      matchId: payload.data.matchId,
+      bannedMap: payload.data.bannedMap,
+      remainingMaps: payload.data.remainingMaps,
+      currentLeaderIndex: payload.data.currentLeaderIndex,
+      timestamp: Date.now(),
+    };
+
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("mapBannedDataForModal", mapBannedData);
+
+    // Also try to send message to any active clients immediately
+    const messagePromise = clients.matchAll().then(function (clientList) {
+      clientList.forEach(function (client) {
+        console.log(
+          "Sending MAP_BANNED message to active client for map banning modal update"
+        );
+        client.postMessage(mapBannedData);
+      });
+    });
+
+    return Promise.all([notificationPromise, messagePromise]);
+  }
+
+  // If this is a map banning complete notification, send a message to close the modal
+  if (
+    payload.data?.action === "map_banning_complete" &&
+    payload.data?.matchId
+  ) {
+    console.log(
+      "Background map banning complete notification received, will show server connection modal when app becomes active"
+    );
+
+    // Store the map banning complete data for when the app becomes active
+    const mapBanningCompleteData = {
+      type: "MAP_BANNING_COMPLETE",
+      matchId: payload.data.matchId,
+      selectedMap: payload.data.selectedMap,
+      timestamp: Date.now(),
+    };
+
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set(
+      "mapBanningCompleteDataForModal",
+      mapBanningCompleteData
+    );
+
+    // Also try to send message to any active clients immediately
+    const messagePromise = clients.matchAll().then(function (clientList) {
+      clientList.forEach(function (client) {
+        console.log(
+          "Sending MAP_BANNING_COMPLETE message to active client for server connection modal display"
+        );
+        client.postMessage(mapBanningCompleteData);
       });
     });
 
@@ -264,7 +412,7 @@ self.addEventListener("notificationclick", function (event) {
 });
 
 // Handle messages from the main app
-self.addEventListener("message", function (event) {
+self.addEventListener("message", async function (event) {
   console.log("Service worker received message:", event.data);
 
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -274,51 +422,154 @@ self.addEventListener("message", function (event) {
     console.log(
       "CHECK_PENDING_MATCH message received, checking for stored data"
     );
-    console.log("Current stored matchDataForModal:", self.matchDataForModal);
-    console.log(
-      "Current stored matchStartedDataForModal:",
-      self.matchStartedDataForModal
-    );
 
-    // Main app is asking if there's pending match data
-    if (self.matchDataForModal) {
-      const matchData = self.matchDataForModal;
-      const timeSinceReceived = Date.now() - matchData.timestamp;
+    // Check for pending match data from persistent storage
+    const checkPendingData = async () => {
+      try {
+        // Check for match data
+        const matchData = await swStorage.get("matchDataForModal");
+        console.log("Retrieved matchDataForModal from storage:", matchData);
 
-      console.log("Time since received:", timeSinceReceived, "ms");
-      console.log("5 minutes in ms:", 5 * 60 * 1000);
+        if (matchData) {
+          const timeSinceReceived = Date.now() - matchData.timestamp;
+          console.log("Time since received:", timeSinceReceived, "ms");
+          console.log("5 minutes in ms:", 5 * 60 * 1000);
 
-      if (timeSinceReceived < 5 * 60 * 1000) {
-        console.log("Sending pending match data to main app");
-        event.ports[0].postMessage(matchData);
-      } else {
-        console.log("Match data is too old, clearing it");
-        delete self.matchDataForModal;
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending match data to main app");
+            event.ports[0].postMessage(matchData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("matchDataForModal");
+          } else {
+            console.log("Match data is too old, clearing it");
+            await swStorage.delete("matchDataForModal");
+          }
+          return;
+        }
+
+        // Check for match started data
+        const matchStartedData = await swStorage.get(
+          "matchStartedDataForModal"
+        );
+        console.log(
+          "Retrieved matchStartedDataForModal from storage:",
+          matchStartedData
+        );
+
+        if (matchStartedData) {
+          const timeSinceReceived = Date.now() - matchStartedData.timestamp;
+          console.log(
+            "Time since match started received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending match started data to main app");
+            event.ports[0].postMessage(matchStartedData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("matchStartedDataForModal");
+          } else {
+            console.log("Match started data is too old, clearing it");
+            await swStorage.delete("matchStartedDataForModal");
+          }
+          return;
+        }
+
+        // Check for map banning data
+        const mapBanningData = await swStorage.get("mapBanningDataForModal");
+        console.log(
+          "Retrieved mapBanningDataForModal from storage:",
+          mapBanningData
+        );
+
+        if (mapBanningData) {
+          const timeSinceReceived = Date.now() - mapBanningData.timestamp;
+          console.log(
+            "Time since map banning received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending map banning data to main app");
+            event.ports[0].postMessage(mapBanningData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("mapBanningDataForModal");
+          } else {
+            console.log("Map banning data is too old, clearing it");
+            await swStorage.delete("mapBanningDataForModal");
+          }
+          return;
+        }
+
+        // Check for map banned data
+        const mapBannedData = await swStorage.get("mapBannedDataForModal");
+        console.log(
+          "Retrieved mapBannedDataForModal from storage:",
+          mapBannedData
+        );
+
+        if (mapBannedData) {
+          const timeSinceReceived = Date.now() - mapBannedData.timestamp;
+          console.log(
+            "Time since map banned received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending map banned data to main app");
+            event.ports[0].postMessage(mapBannedData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("mapBannedDataForModal");
+          } else {
+            console.log("Map banned data is too old, clearing it");
+            await swStorage.delete("mapBannedDataForModal");
+          }
+          return;
+        }
+
+        // Check for map banning complete data
+        const mapBanningCompleteData = await swStorage.get(
+          "mapBanningCompleteDataForModal"
+        );
+        console.log(
+          "Retrieved mapBanningCompleteDataForModal from storage:",
+          mapBanningCompleteData
+        );
+
+        if (mapBanningCompleteData) {
+          const timeSinceReceived =
+            Date.now() - mapBanningCompleteData.timestamp;
+          console.log(
+            "Time since map banning complete received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log(
+              "Sending pending map banning complete data to main app"
+            );
+            event.ports[0].postMessage(mapBanningCompleteData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("mapBanningCompleteDataForModal");
+          } else {
+            console.log("Map banning complete data is too old, clearing it");
+            await swStorage.delete("mapBanningCompleteDataForModal");
+          }
+          return;
+        }
+
+        console.log("No stored match data found");
+      } catch (error) {
+        console.error("Error checking pending data:", error);
       }
-    } else if (self.matchStartedDataForModal) {
-      const matchStartedData = self.matchStartedDataForModal;
-      const timeSinceReceived = Date.now() - matchStartedData.timestamp;
+    };
 
-      console.log(
-        "Time since match started received:",
-        timeSinceReceived,
-        "ms"
-      );
-
-      if (timeSinceReceived < 5 * 60 * 1000) {
-        console.log("Sending pending match started data to main app");
-        event.ports[0].postMessage(matchStartedData);
-      } else {
-        console.log("Match started data is too old, clearing it");
-        delete self.matchStartedDataForModal;
-      }
-    } else {
-      console.log("No stored match data found");
-    }
-
-    // Clear stored data after checking
-    delete self.matchDataForModal;
-    delete self.matchStartedDataForModal;
+    // Execute the async check
+    checkPendingData();
   } else if (event.data && event.data.type === "SIMULATE_BACKGROUND_MESSAGE") {
     // Simulate a background message for testing
     console.log("Simulating background message:", event.data.payload);
@@ -391,8 +642,8 @@ self.addEventListener("message", function (event) {
         timestamp: Date.now(),
       };
 
-      // Store in service worker memory for persistence
-      self.matchDataForModal = matchData;
+      // Store in persistent storage for persistence across service worker restarts
+      await swStorage.set("matchDataForModal", matchData);
 
       // Also try to send message to any active clients immediately
       const messagePromise = clients.matchAll().then(function (clientList) {
@@ -411,7 +662,59 @@ self.addEventListener("message", function (event) {
   } else if (event.data && event.data.type === "CLEAR_PENDING_MATCH") {
     // Clear any stored match data
     console.log("Clearing pending match data");
-    delete self.matchDataForModal;
+    await swStorage.delete("matchDataForModal");
+    await swStorage.delete("matchStartedDataForModal");
+    await swStorage.delete("mapBanningDataForModal");
+    await swStorage.delete("mapBannedDataForModal");
+    await swStorage.delete("mapBanningCompleteDataForModal");
+  } else if (event.data && event.data.type === "CLEAR_MAP_BANNING_DATA") {
+    // Clear map banning related data for a specific match
+    console.log("Clearing map banning data for match:", event.data.matchId);
+    await swStorage.delete("mapBanningDataForModal");
+    await swStorage.delete("mapBannedDataForModal");
+    await swStorage.delete("mapBanningCompleteDataForModal");
+  } else if (event.data && event.data.type === "DEBUG_STATE") {
+    // Debug function to check current state
+    console.log("=== Service Worker Debug State ===");
+
+    const checkDebugState = async () => {
+      try {
+        const matchDataForModal = await swStorage.get("matchDataForModal");
+        const matchStartedDataForModal = await swStorage.get(
+          "matchStartedDataForModal"
+        );
+        const mapBanningDataForModal = await swStorage.get(
+          "mapBanningDataForModal"
+        );
+
+        console.log("matchDataForModal:", matchDataForModal);
+        console.log("matchStartedDataForModal:", matchStartedDataForModal);
+        console.log("mapBanningDataForModal:", mapBanningDataForModal);
+        console.log("Current timestamp:", Date.now());
+
+        if (matchDataForModal) {
+          const timeSinceReceived = Date.now() - matchDataForModal.timestamp;
+          console.log(
+            "Time since match data received:",
+            timeSinceReceived,
+            "ms"
+          );
+        }
+
+        // Send debug info back to client
+        event.ports[0].postMessage({
+          type: "DEBUG_STATE_RESPONSE",
+          matchDataForModal: matchDataForModal,
+          matchStartedDataForModal: matchStartedDataForModal,
+          mapBanningDataForModal: mapBanningDataForModal,
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        console.error("Error checking debug state:", error);
+      }
+    };
+
+    checkDebugState();
   }
 });
 
