@@ -10,6 +10,7 @@ import { PushNotificationService } from "./utils/push-notifications";
 import NotificationBadge from "./components/NotificationBadge";
 import MatchAcceptanceModal from "./components/MatchAcceptanceModal";
 import ServerConnectionModal from "./components/ServerConnectionModal";
+import { DeviceIdDisplay } from "./components/DeviceIdDisplay";
 import { BackgroundMessageTest } from "./utils/background-message-test";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -61,8 +62,11 @@ export default function App() {
 
   // Initialize push notifications when user is authenticated
   useEffect(() => {
-    console.log("Push notification initialization check:", { isAuthenticated, hasToken: !!token });
-    
+    console.log("Push notification initialization check:", {
+      isAuthenticated,
+      hasToken: !!token,
+    });
+
     if (isAuthenticated && token) {
       console.log("Starting push notification initialization...");
       const pushService = PushNotificationService.getInstance();
@@ -81,7 +85,9 @@ export default function App() {
           console.error("Error initializing push notifications:", error);
         });
     } else {
-      console.log("Skipping push notification initialization - not authenticated or no token");
+      console.log(
+        "Skipping push notification initialization - not authenticated or no token"
+      );
     }
   }, [isAuthenticated, token]);
 
@@ -564,6 +570,9 @@ export default function App() {
           onCopyConnectionInfo={handleCopyConnectionInfo}
         />
       )}
+
+      {/* Device ID Display for debugging */}
+      <DeviceIdDisplay />
     </div>
   );
 }

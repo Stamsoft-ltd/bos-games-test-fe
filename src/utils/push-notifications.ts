@@ -1,5 +1,10 @@
-import { setPushToken, removePushToken } from "../api/push-tokens";
+import {
+  setPushToken,
+  removePushToken,
+  PlatformEnum,
+} from "../api/push-tokens";
 import { firebaseConfig, vapidKey } from "../config/firebase";
+import { getDeviceId } from "./device-id";
 
 export class PushNotificationService {
   private static instance: PushNotificationService;
@@ -25,6 +30,23 @@ export class PushNotificationService {
       PushNotificationService.instance = new PushNotificationService();
     }
     return PushNotificationService.instance;
+  }
+
+  /**
+   * Detect the current platform
+   */
+  private detectPlatform(): PlatformEnum {
+    const userAgent = navigator.userAgent.toLowerCase();
+
+    if (/iphone|ipad|ipod/.test(userAgent)) {
+      return PlatformEnum.IOS;
+    } else if (/android/.test(userAgent)) {
+      return PlatformEnum.ANDROID;
+    } else if (/windows/.test(userAgent)) {
+      return PlatformEnum.WINDOWS;
+    } else {
+      return PlatformEnum.WEB;
+    }
   }
 
   async requestPermission(): Promise<boolean> {
@@ -98,7 +120,6 @@ export class PushNotificationService {
         }
       });
 
-      console.log("Firebase initialized successfully");
       return true;
     } catch (error) {
       console.error("Failed to initialize Firebase:", error);
@@ -126,12 +147,26 @@ export class PushNotificationService {
 
       if (token) {
         console.log("Firebase messaging token obtained:", token);
-        console.log("Sending push token to backend:", token);
-        console.log("API URL being used:", import.meta.env.VITE_API_URL);
-        
+
+        // Get device ID and platform
+        const deviceId = getDeviceId();
+        const platform = this.detectPlatform();
+
+        console.log("Device ID:", deviceId);
+        console.log("Platform:", platform);
+        console.log("Sending push token to backend:", {
+          token,
+          deviceId,
+          platform,
+        });
+
         try {
-          await setPushToken(token, authToken);
-          console.log("Push token registered successfully:", token);
+          await setPushToken(token, deviceId, platform, authToken);
+          console.log("Push token registered successfully:", {
+            token,
+            deviceId,
+            platform,
+          });
           return token;
         } catch (apiError) {
           console.error("Failed to send push token to backend:", apiError);
