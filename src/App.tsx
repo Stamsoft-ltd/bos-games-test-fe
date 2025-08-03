@@ -21,6 +21,7 @@ import Teams from "./pages/Teams";
 import Parties from "./pages/Parties";
 import Notifications from "./pages/Notifications";
 import SocialAuth from "./pages/SocialAuth";
+import HardwareProfile from "./pages/HardwareProfile";
 import {
   MapBanSession,
   getMapBanSession,
@@ -1073,6 +1074,9 @@ export default function App() {
               <Link to="/parties" className="text-indigo-500 hover:underline">
                 Parties
               </Link>
+              <Link to="/hardware" className="text-indigo-500 hover:underline">
+                Hardware
+              </Link>
               <Link
                 to="/notifications"
                 className="text-indigo-500 hover:underline relative"
@@ -1109,6 +1113,7 @@ export default function App() {
           <Route path="/friends" element={<Friends />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/parties" element={<Parties />} />
+          <Route path="/hardware" element={<HardwareProfile />} />
           <Route path="/notifications" element={<Notifications />} />
         </Routes>
       </main>
