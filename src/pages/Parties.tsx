@@ -18,6 +18,8 @@ import {
   getMySoloParties,
 } from "../api/party";
 import { getAllTeams } from "../api/team";
+import { getMyRatings, GameModeRating } from "../api/ratings";
+import RatingsDisplay from "../components/RatingsDisplay";
 
 export default function PartiesPage() {
   const navigate = useNavigate();
@@ -36,6 +38,11 @@ export default function PartiesPage() {
   const [soloMatchmakingStatus, setSoloMatchmakingStatus] = useState<
     Record<string, any>
   >({});
+
+  // Ratings state
+  const [ratings, setRatings] = useState<GameModeRating[]>([]);
+  const [ratingsLoading, setRatingsLoading] = useState(false);
+  const [ratingsError, setRatingsError] = useState<string>("");
 
   // Check authentication
   useEffect(() => {
@@ -84,6 +91,9 @@ export default function PartiesPage() {
         .finally(() => {
           setLoading(false);
         });
+
+      // Load ratings separately
+      loadRatings();
     }
   }, [token, navigate]);
 
@@ -108,6 +118,22 @@ export default function PartiesPage() {
       {}
     );
     setSoloMatchmakingStatus(combinedStatus);
+  };
+
+  // Load user ratings
+  const loadRatings = async () => {
+    setRatingsLoading(true);
+    setRatingsError("");
+    
+    try {
+      const ratingsData = await getMyRatings(token);
+      setRatings(ratingsData.ratings);
+    } catch (error: any) {
+      console.error("Error loading ratings:", error);
+      setRatingsError(error.message || "Failed to load ratings");
+    } finally {
+      setRatingsLoading(false);
+    }
   };
 
   async function handleCreateParty() {
@@ -274,6 +300,13 @@ export default function PartiesPage() {
           {status}
         </div>
       )}
+
+      {/* Ratings Display */}
+      <RatingsDisplay 
+        ratings={ratings}
+        loading={ratingsLoading}
+        error={ratingsError}
+      />
 
       {/* Solo Matchmaking Section */}
       <div className="bg-white p-4 rounded-lg shadow">
