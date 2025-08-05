@@ -58,7 +58,7 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
 
     // Use steam://connect to try connecting to already running CS2 first
     // If CS2 is not running, it will launch it automatically
-    const steamUrl = `steam://connect/${serverIp}:${serverPort}`;
+    const steamUrl = `steam://rungameid/730//+connect ${serverIp}:${serverPort}`;
 
     try {
       // Try to open the Steam URL

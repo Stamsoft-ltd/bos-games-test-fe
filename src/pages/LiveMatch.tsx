@@ -393,7 +393,7 @@ const LiveMatchPage: React.FC = () => {
               onClick={() => {
                 // Use steam://connect to try connecting to already running CS2 first
                 // If CS2 is not running, it will launch it automatically
-                const steamUrl = `steam://connect/${matchStats.serverIp}:${matchStats.serverPort}`;
+                const steamUrl = `steam://rungameid/730//+connect ${matchStats.serverIp}:${matchStats.serverPort}`;
                 window.location.href = steamUrl;
               }}
               className="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
@@ -408,4 +408,3 @@ const LiveMatchPage: React.FC = () => {
 };
 
 export default LiveMatchPage;
- 

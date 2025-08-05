@@ -39,7 +39,7 @@ const LiveMatches: React.FC = () => {
     if (match.serverIp && match.serverPort) {
       // Use steam://connect to try connecting to already running CS2 first
       // If CS2 is not running, it will launch it automatically
-      const steamUrl = `steam://connect/${match.serverIp}:${match.serverPort}`;
+      const steamUrl = `steam://rungameid/730//+connect ${match.serverIp}:${match.serverPort}`;
       window.location.href = steamUrl;
     }
   };
@@ -238,4 +238,3 @@ const LiveMatches: React.FC = () => {
 };
 
 export default LiveMatches;
- 
