@@ -124,7 +124,7 @@ export default function PartiesPage() {
   const loadRatings = async () => {
     setRatingsLoading(true);
     setRatingsError("");
-    
+
     try {
       const ratingsData = await getMyRatings(token);
       setRatings(ratingsData.ratings);
@@ -302,7 +302,7 @@ export default function PartiesPage() {
       )}
 
       {/* Ratings Display */}
-      <RatingsDisplay 
+      <RatingsDisplay
         ratings={ratings}
         loading={ratingsLoading}
         error={ratingsError}
@@ -382,8 +382,8 @@ export default function PartiesPage() {
             My Solo Parties ({mySoloParties.length})
           </h2>
           <div className="space-y-3">
-            {mySoloParties.map((party) => (
-              <div key={party.id} className="p-3 bg-blue-50 rounded border">
+            {mySoloParties.map((party, i) => (
+              <div key={i} className="p-3 bg-blue-50 rounded border">
                 <div className="font-medium">Solo Party ID: {party.id}</div>
                 <div className="text-sm text-gray-600">
                   Game Mode: {party.gameMode?.name || "Unknown Mode"}

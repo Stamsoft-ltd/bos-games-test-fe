@@ -178,8 +178,8 @@ export class PushNotificationService {
           const event = new CustomEvent("round-end", {
             detail: {
               matchId: payload.data.matchId,
-              team1Score: payload.data.data?.team1?.stats?.score,
-              team2Score: payload.data.data?.team2?.stats?.score,
+              team1Score: (payload.data.data as any)?.team1?.stats?.score,
+              team2Score: (payload.data.data as any)?.team2?.stats?.score,
             },
           });
           window.dispatchEvent(event);
@@ -197,8 +197,8 @@ export class PushNotificationService {
             detail: {
               matchId: payload.data.matchId,
               winner: payload.data.winner,
-              finalTeam1Score: payload.data.data?.team1?.stats?.score,
-              finalTeam2Score: payload.data.data?.team2?.stats?.score,
+              finalTeam1Score: (payload.data.data as any)?.team1?.stats?.score,
+              finalTeam2Score: (payload.data.data as any)?.team2?.stats?.score,
             },
           });
           window.dispatchEvent(event);
