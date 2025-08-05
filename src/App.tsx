@@ -1161,7 +1161,7 @@ export default function App() {
               <button
                 onClick={() => {
                   // Multiple approaches to handle fullscreen game focus issues
-                  const steamUrl = `steam://run/730//+connect chanticos.dathost.net:26952`;
+                  const steamUrl = `steam://run/730//+connect 156.146.52.210:26952`;
 
                   console.log("Attempting to connect to test server:", {
                     steamUrl,
