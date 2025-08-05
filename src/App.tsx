@@ -134,7 +134,7 @@ export default function App() {
 
       try {
         // Handle different message types from service worker
-        if (event.data.type === "MATCH_ACCEPT" && event.data.matchId) {
+        if (event.data.type === "match_accept" && event.data.matchId) {
           console.log("Accepting match from notification:", event.data.matchId);
           const result = await acceptMatchFromNotification(
             token,
@@ -152,7 +152,7 @@ export default function App() {
               icon: "/favicon.ico",
             });
           }
-        } else if (event.data.type === "MATCH_DECLINE" && event.data.matchId) {
+        } else if (event.data.type === "match_decline" && event.data.matchId) {
           console.log("Declining match from notification:", event.data.matchId);
           const result = await declineMatchFromNotification(
             token,
@@ -429,7 +429,7 @@ export default function App() {
             fetchSessionWithRetry();
           }
         } else if (
-          event.data.type === "MAP_BANNING_COMPLETE" &&
+          event.data.type === "map_banning_complete" &&
           event.data.matchId
         ) {
           console.log(

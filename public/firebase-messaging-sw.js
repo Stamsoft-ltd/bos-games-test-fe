@@ -372,7 +372,7 @@ messaging.onBackgroundMessage(async (payload) => {
 
     // Store the map banning data for when the app becomes active
     const mapBanningData = {
-      type: "MAP_BANNING_STARTED",
+      type: "map_banning_started",
       matchId: payload.data.matchId,
       timestamp: Date.now(),
     };
@@ -401,7 +401,7 @@ messaging.onBackgroundMessage(async (payload) => {
 
     // Store the map banned data for when the app becomes active
     const mapBannedData = {
-      type: "MAP_BANNED",
+      type: "map_banned",
       matchId: payload.data.matchId,
       bannedMap: payload.data.bannedMap,
       remainingMaps: payload.data.remainingMaps,
@@ -433,7 +433,7 @@ messaging.onBackgroundMessage(async (payload) => {
 
     // Store the map banning complete data for when the app becomes active
     const mapBanningCompleteData = {
-      type: "MAP_BANNING_COMPLETE",
+      type: "map_banning_complete",
       matchId: payload.data.matchId,
       selectedMap: payload.data.selectedMap,
       timestamp: Date.now(),
@@ -475,7 +475,7 @@ self.addEventListener("notificationclick", function (event) {
       clients.matchAll().then(function (clientList) {
         clientList.forEach(function (client) {
           client.postMessage({
-            type: "MATCH_ACCEPT",
+            type: "match_accept",
             matchId: data.matchId,
           });
         });
@@ -487,7 +487,7 @@ self.addEventListener("notificationclick", function (event) {
       clients.matchAll().then(function (clientList) {
         clientList.forEach(function (client) {
           client.postMessage({
-            type: "MATCH_DECLINE",
+            type: "match_decline",
             matchId: data.matchId,
           });
         });
@@ -499,7 +499,7 @@ self.addEventListener("notificationclick", function (event) {
       clients.matchAll().then(function (clientList) {
         clientList.forEach(function (client) {
           client.postMessage({
-            type: "FRIEND_REQUEST_ACCEPT",
+            type: "friend_request_accept",
             requestId: data.requestId,
           });
         });
@@ -511,7 +511,7 @@ self.addEventListener("notificationclick", function (event) {
       clients.matchAll().then(function (clientList) {
         clientList.forEach(function (client) {
           client.postMessage({
-            type: "FRIEND_REQUEST_DECLINE",
+            type: "friend_request_decline",
             requestId: data.requestId,
           });
         });
@@ -523,7 +523,7 @@ self.addEventListener("notificationclick", function (event) {
       clients.matchAll().then(function (clientList) {
         clientList.forEach(function (client) {
           client.postMessage({
-            type: "TEAM_INVITE_ACCEPT",
+            type: "team_invite_accept",
             inviteId: data.inviteId,
           });
         });
@@ -535,7 +535,7 @@ self.addEventListener("notificationclick", function (event) {
       clients.matchAll().then(function (clientList) {
         clientList.forEach(function (client) {
           client.postMessage({
-            type: "TEAM_INVITE_DECLINE",
+            type: "team_invite_decline",
             inviteId: data.inviteId,
           });
         });
@@ -859,7 +859,7 @@ self.addEventListener("message", async function (event) {
 
       // Store the match data for when the app becomes active
       const matchData = {
-        type: "MATCH_FOUND",
+        type: "match_found",
         matchId: payload.data.matchId,
         timestamp: Date.now(),
       };
