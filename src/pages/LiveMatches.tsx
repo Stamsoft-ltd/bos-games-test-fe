@@ -38,7 +38,7 @@ const LiveMatches: React.FC = () => {
   const handleLaunchGame = (match: LiveMatch) => {
     if (match.serverIp && match.serverPort) {
       // Multiple approaches to handle fullscreen game focus issues
-      const steamUrl = `steam://run/730//+connect ${match.serverIp}:${match.serverPort}`;
+      const steamUrl = `steam://run/730//+connect ${match.serverIp}:${match.serverPort} -novid`;
 
       console.log("Attempting to connect to CS2 server:", {
         serverIp: match.serverIp,

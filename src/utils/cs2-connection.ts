@@ -14,7 +14,7 @@ export const connectToCS2Server = (options: CS2ConnectionOptions) => {
   const { serverIp, serverPort, onSuccess, onError } = options;
 
   // Multiple approaches to handle fullscreen game focus issues
-  const steamUrl = `steam://run/730//+connect ${serverIp}:${serverPort}`;
+  const steamUrl = `steam://run/730//+connect ${serverIp}:${serverPort} -novid`;
 
   console.log("Attempting to connect to CS2 server:", {
     serverIp,
