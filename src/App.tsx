@@ -1162,58 +1162,18 @@ export default function App() {
                 onClick={() => {
                   // Multiple approaches to handle fullscreen game focus issues
                   const steamUrl = `steam://run/730//+connect chanticos.dathost.net:26952`;
-                  const steamConnectUrl = `steam://connect/chanticos.dathost.net:26952`;
 
                   console.log("Attempting to connect to test server:", {
                     steamUrl,
-                    steamConnectUrl,
                   });
 
                   // Try multiple approaches to handle fullscreen game focus
                   const tryConnect = async () => {
                     try {
-                      // First attempt: Try the run command (launches if not running, connects if running)
                       console.log("Attempt 1: Using steam://run command");
-                      window.open(steamUrl, "_blank");
-
-                      // Wait a moment then try alternative approach
-                      setTimeout(() => {
-                        try {
-                          // Second attempt: Try direct connect (may work better with fullscreen)
-                          console.log(
-                            "Attempt 2: Using steam://connect command"
-                          );
-                          window.open(steamConnectUrl, "_blank");
-                        } catch (error) {
-                          console.log("Direct connect failed:", error);
-                          // Third attempt: Fallback to current window
-                          try {
-                            console.log("Attempt 3: Using current window");
-                            window.location.href = steamUrl;
-                          } catch (fallbackError) {
-                            console.error(
-                              "All connection attempts failed:",
-                              fallbackError
-                            );
-                            // Show user instructions
-                            alert(
-                              `Unable to automatically connect to CS2.\n\nPlease manually connect to:\nchanticos.dathost.net:26952\n\nIf CS2 is running in fullscreen, try:\n1. Alt+Tab to CS2\n2. Press F12 to open console\n3. Type: connect chanticos.dathost.net:26952`
-                            );
-                          }
-                        }
-                      }, 1000);
+                      window.location.href = steamUrl;
                     } catch (error) {
                       console.log("Initial connection attempt failed:", error);
-                      // Try direct connect as fallback
-                      try {
-                        window.open(steamConnectUrl, "_blank");
-                      } catch (directError) {
-                        console.error(
-                          "Direct connect also failed:",
-                          directError
-                        );
-                        window.location.href = steamUrl;
-                      }
                     }
                   };
 
