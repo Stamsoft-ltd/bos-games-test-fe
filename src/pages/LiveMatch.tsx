@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getLiveMatch, LiveMatchInterface } from "../api/live-matches";
+import { getLiveMatch, LiveMatch } from "../api/live-matches";
 
-const LiveMatch: React.FC = () => {
+const LiveMatchPage: React.FC = () => {
   const navigate = useNavigate();
   const { matchId } = useParams<{ matchId: string }>();
-  const [matchStats, setMatchStats] = useState<LiveMatchInterface | null>(null);
+  const [matchStats, setMatchStats] = useState<LiveMatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -391,7 +391,9 @@ const LiveMatch: React.FC = () => {
           {matchStats.serverIp && matchStats.serverPort && (
             <button
               onClick={() => {
-                const steamUrl = `steam://rungameid/730//+connect ${matchStats.serverIp}:${matchStats.serverPort}`;
+                // Use steam://connect to try connecting to already running CS2 first
+                // If CS2 is not running, it will launch it automatically
+                const steamUrl = `steam://connect/${matchStats.serverIp}:${matchStats.serverPort}`;
                 window.location.href = steamUrl;
               }}
               className="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
@@ -405,4 +407,5 @@ const LiveMatch: React.FC = () => {
   );
 };
 
-export default LiveMatch;
+export default LiveMatchPage;
+ 

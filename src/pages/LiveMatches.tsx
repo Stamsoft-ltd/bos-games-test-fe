@@ -37,7 +37,9 @@ const LiveMatches: React.FC = () => {
 
   const handleLaunchGame = (match: LiveMatch) => {
     if (match.serverIp && match.serverPort) {
-      const steamUrl = `steam://rungameid/730//+connect ${match.serverIp}:${match.serverPort}`;
+      // Use steam://connect to try connecting to already running CS2 first
+      // If CS2 is not running, it will launch it automatically
+      const steamUrl = `steam://connect/${match.serverIp}:${match.serverPort}`;
       window.location.href = steamUrl;
     }
   };
@@ -144,9 +146,7 @@ const LiveMatches: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <span>
-                      👥 {match.players?.length || 0} players
-                    </span>
+                    <span>👥 {match.players?.length || 0} players</span>
                     <span>•</span>
                     <span>
                       Round {match.currentRound}/{match.totalRounds}
@@ -238,3 +238,4 @@ const LiveMatches: React.FC = () => {
 };
 
 export default LiveMatches;
+ 

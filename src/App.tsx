@@ -22,7 +22,7 @@ import Parties from "./pages/Parties";
 import Notifications from "./pages/Notifications";
 import SocialAuth from "./pages/SocialAuth";
 import HardwareProfile from "./pages/HardwareProfile";
-import LiveMatch from "./pages/LiveMatch";
+import LiveMatchPage from "./pages/LiveMatch";
 import LiveMatches from "./pages/LiveMatches";
 import {
   MapBanSession,
@@ -1145,7 +1145,7 @@ export default function App() {
           <Route path="/hardware" element={<HardwareProfile />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/live-matches" element={<LiveMatches />} />
-          <Route path="/live-match/:matchId" element={<LiveMatch />} />
+          <Route path="/live-match/:matchId" element={<LiveMatchPage />} />
         </Routes>
       </main>
 

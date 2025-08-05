@@ -19,7 +19,7 @@ export interface LiveMatchRound {
   duration?: number;
 }
 
-export interface LiveMatchInterface {
+export interface LiveMatch {
   matchId: string;
   serverIp?: string;
   serverPort?: number;
@@ -85,3 +85,4 @@ export async function getLiveMatch(
 
   return response.json();
 }
+ 
