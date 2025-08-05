@@ -165,9 +165,63 @@ export class PushNotificationService {
             },
           });
           window.dispatchEvent(event);
+        } else if (
+          payload.data?.action === "round_completed" &&
+          payload.data?.matchId
+        ) {
+          console.log(
+            "Foreground round completed notification received, updating live match"
+          );
+          console.log("Round completion data:", payload.data);
+
+          // Dispatch a custom event for round end
+          const event = new CustomEvent("round-end", {
+            detail: {
+              matchId: payload.data.matchId,
+              team1Score: payload.data.data?.team1?.stats?.score,
+              team2Score: payload.data.data?.team2?.stats?.score,
+            },
+          });
+          window.dispatchEvent(event);
+        } else if (
+          payload.data?.action === "match_completed" &&
+          payload.data?.matchId
+        ) {
+          console.log(
+            "Foreground match completed notification received, updating live match"
+          );
+          console.log("Match completion data:", payload.data);
+
+          // Dispatch a custom event for match end
+          const event = new CustomEvent("match-end", {
+            detail: {
+              matchId: payload.data.matchId,
+              winner: payload.data.winner,
+              finalTeam1Score: payload.data.data?.team1?.stats?.score,
+              finalTeam2Score: payload.data.data?.team2?.stats?.score,
+            },
+          });
+          window.dispatchEvent(event);
+        } else if (
+          payload.data?.action === "player_update" &&
+          payload.data?.matchId
+        ) {
+          console.log(
+            "Foreground player update notification received, updating live match"
+          );
+
+          // Dispatch a custom event for player update
+          const event = new CustomEvent("player-update", {
+            detail: {
+              matchId: payload.data.matchId,
+              steamId: payload.data.steamId,
+              stats: payload.data.stats,
+            },
+          });
+          window.dispatchEvent(event);
         } else {
           console.log(
-            "Foreground message received but not a match acceptance, match started, or map banning notification"
+            "Foreground message received but not a recognized notification type"
           );
         }
       });
