@@ -88,7 +88,7 @@ messaging.onBackgroundMessage(async (payload) => {
     tag: payload.data?.tag || "default",
     data: payload.data || {},
     actions:
-      payload.data?.action === "accept_match"
+      payload.data?.type === "accept_match"
         ? [
             {
               action: "accept_match",
@@ -106,7 +106,7 @@ messaging.onBackgroundMessage(async (payload) => {
               icon: "/favicon.ico",
             },
           ]
-        : payload.data?.action === "friend_request"
+        : payload.data?.type === "friend_request"
         ? [
             {
               action: "accept_friend",
@@ -124,7 +124,7 @@ messaging.onBackgroundMessage(async (payload) => {
               icon: "/favicon.ico",
             },
           ]
-        : payload.data?.action === "team_invite"
+        : payload.data?.type === "team_invite"
         ? [
             {
               action: "accept_team",
@@ -158,7 +158,7 @@ messaging.onBackgroundMessage(async (payload) => {
       "accept_match",
       "friend_request",
       "team_invite",
-    ].includes(payload.data?.action),
+    ].includes(payload.data?.type),
     silent: false,
   };
 
@@ -169,14 +169,14 @@ messaging.onBackgroundMessage(async (payload) => {
   );
 
   // If this is a match acceptance notification, also send a message to the app to show the modal
-  if (payload.data?.action === "accept_match" && payload.data?.matchId) {
+  if (payload.data?.type === "accept_match" && payload.data?.matchId) {
     console.log(
       "Background match notification received, will trigger modal when app becomes active"
     );
 
     // Store the match data for when the app becomes active
     const matchData = {
-      type: "MATCH_FOUND",
+      type: "accept_match",
       matchId: payload.data.matchId,
       timestamp: Date.now(),
     };
@@ -203,14 +203,14 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a match started notification, also send a message to the app to show the server connection modal
-  if (payload.data?.action === "match_started" && payload.data?.matchId) {
+  if (payload.data?.type === "match_started" && payload.data?.matchId) {
     console.log(
       "Background match started notification received, will trigger server connection modal when app becomes active"
     );
 
     // Store the match started data for when the app becomes active
     const matchStartedData = {
-      type: "MATCH_STARTED",
+      type: "match_started",
       matchId: payload.data.matchId,
       serverIp: payload.data.serverIp,
       serverPort: payload.data.serverPort,
@@ -235,7 +235,7 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a round completed notification, send a message to update the live match
-  if (payload.data?.action === "round_completed" && payload.data?.matchId) {
+  if (payload.data?.type === "round_completed" && payload.data?.matchId) {
     console.log(
       "Background round completed notification received, will update live match when app becomes active"
     );
@@ -243,10 +243,11 @@ messaging.onBackgroundMessage(async (payload) => {
 
     // Store the round completion data for when the app becomes active
     const roundCompletedData = {
-      type: "ROUND_COMPLETED",
+      type: "round_completed",
       matchId: payload.data.matchId,
       team1Score: payload.data.data?.team1?.stats?.score,
       team2Score: payload.data.data?.team2?.stats?.score,
+      players: payload.data.data?.players || [],
       timestamp: Date.now(),
     };
 
@@ -270,7 +271,7 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a match completed notification, send a message to update the live match
-  if (payload.data?.action === "match_completed" && payload.data?.matchId) {
+  if (payload.data?.type === "match_completed" && payload.data?.matchId) {
     console.log(
       "Background match completed notification received, will update live match when app becomes active"
     );
@@ -278,11 +279,12 @@ messaging.onBackgroundMessage(async (payload) => {
 
     // Store the match completion data for when the app becomes active
     const matchCompletedData = {
-      type: "MATCH_COMPLETED",
+      type: "match_completed",
       matchId: payload.data.matchId,
       winner: payload.data.winner,
       finalTeam1Score: payload.data.data?.team1?.stats?.score,
       finalTeam2Score: payload.data.data?.team2?.stats?.score,
+      players: payload.data.data?.players || [],
       timestamp: Date.now(),
     };
 
@@ -309,7 +311,7 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a player update notification, send a message to update the live match
-  if (payload.data?.action === "player_update" && payload.data?.matchId) {
+  if (payload.data?.type === "player_update" && payload.data?.matchId) {
     console.log(
       "Background player update notification received, will update live match when app becomes active"
     );
@@ -317,7 +319,7 @@ messaging.onBackgroundMessage(async (payload) => {
 
     // Store the player update data for when the app becomes active
     const playerUpdateData = {
-      type: "PLAYER_UPDATE",
+      type: "player_update",
       matchId: payload.data.matchId,
       steamId: payload.data.steamId,
       stats: payload.data.stats,
@@ -344,7 +346,7 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a map banning started notification, also send a message to the app to show the map banning modal
-  if (payload.data?.action === "map_banning_started" && payload.data?.matchId) {
+  if (payload.data?.type === "map_banning_started" && payload.data?.matchId) {
     console.log(
       "Background map banning started notification received, will trigger map banning modal when app becomes active"
     );
@@ -373,7 +375,7 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a map banned notification, send a message to update the modal
-  if (payload.data?.action === "map_banned" && payload.data?.matchId) {
+  if (payload.data?.type === "map_banned" && payload.data?.matchId) {
     console.log(
       "Background map banned notification received, will update map banning modal when app becomes active"
     );
@@ -405,10 +407,7 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 
   // If this is a map banning complete notification, send a message to close the modal
-  if (
-    payload.data?.action === "map_banning_complete" &&
-    payload.data?.matchId
-  ) {
+  if (payload.data?.type === "map_banning_complete" && payload.data?.matchId) {
     console.log(
       "Background map banning complete notification received, will show server connection modal when app becomes active"
     );
@@ -679,6 +678,93 @@ self.addEventListener("message", async function (event) {
           return;
         }
 
+        // Check for round completed data
+        const roundCompletedData = await swStorage.get(
+          "roundCompletedDataForModal"
+        );
+        console.log(
+          "Retrieved roundCompletedDataForModal from storage:",
+          roundCompletedData
+        );
+
+        if (roundCompletedData) {
+          const timeSinceReceived = Date.now() - roundCompletedData.timestamp;
+          console.log(
+            "Time since round completed received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending round completed data to main app");
+            event.ports[0].postMessage(roundCompletedData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("roundCompletedDataForModal");
+          } else {
+            console.log("Round completed data is too old, clearing it");
+            await swStorage.delete("roundCompletedDataForModal");
+          }
+          return;
+        }
+
+        // Check for match completed data
+        const matchCompletedData = await swStorage.get(
+          "matchCompletedDataForModal"
+        );
+        console.log(
+          "Retrieved matchCompletedDataForModal from storage:",
+          matchCompletedData
+        );
+
+        if (matchCompletedData) {
+          const timeSinceReceived = Date.now() - matchCompletedData.timestamp;
+          console.log(
+            "Time since match completed received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending match completed data to main app");
+            event.ports[0].postMessage(matchCompletedData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("matchCompletedDataForModal");
+          } else {
+            console.log("Match completed data is too old, clearing it");
+            await swStorage.delete("matchCompletedDataForModal");
+          }
+          return;
+        }
+
+        // Check for player update data
+        const playerUpdateData = await swStorage.get(
+          "playerUpdateDataForModal"
+        );
+        console.log(
+          "Retrieved playerUpdateDataForModal from storage:",
+          playerUpdateData
+        );
+
+        if (playerUpdateData) {
+          const timeSinceReceived = Date.now() - playerUpdateData.timestamp;
+          console.log(
+            "Time since player update received:",
+            timeSinceReceived,
+            "ms"
+          );
+
+          if (timeSinceReceived < 5 * 60 * 1000) {
+            console.log("Sending pending player update data to main app");
+            event.ports[0].postMessage(playerUpdateData);
+            // Clear the data after successfully sending it
+            await swStorage.delete("playerUpdateDataForModal");
+          } else {
+            console.log("Player update data is too old, clearing it");
+            await swStorage.delete("playerUpdateDataForModal");
+          }
+          return;
+        }
+
         console.log("No stored match data found");
       } catch (error) {
         console.error("Error checking pending data:", error);
@@ -784,6 +870,9 @@ self.addEventListener("message", async function (event) {
     await swStorage.delete("mapBanningDataForModal");
     await swStorage.delete("mapBannedDataForModal");
     await swStorage.delete("mapBanningCompleteDataForModal");
+    await swStorage.delete("roundCompletedDataForModal");
+    await swStorage.delete("matchCompletedDataForModal");
+    await swStorage.delete("playerUpdateDataForModal");
   } else if (event.data && event.data.type === "CLEAR_MAP_BANNING_DATA") {
     // Clear map banning related data for a specific match
     console.log("Clearing map banning data for match:", event.data.matchId);
@@ -803,10 +892,22 @@ self.addEventListener("message", async function (event) {
         const mapBanningDataForModal = await swStorage.get(
           "mapBanningDataForModal"
         );
+        const roundCompletedDataForModal = await swStorage.get(
+          "roundCompletedDataForModal"
+        );
+        const matchCompletedDataForModal = await swStorage.get(
+          "matchCompletedDataForModal"
+        );
+        const playerUpdateDataForModal = await swStorage.get(
+          "playerUpdateDataForModal"
+        );
 
         console.log("matchDataForModal:", matchDataForModal);
         console.log("matchStartedDataForModal:", matchStartedDataForModal);
         console.log("mapBanningDataForModal:", mapBanningDataForModal);
+        console.log("roundCompletedDataForModal:", roundCompletedDataForModal);
+        console.log("matchCompletedDataForModal:", matchCompletedDataForModal);
+        console.log("playerUpdateDataForModal:", playerUpdateDataForModal);
         console.log("Current timestamp:", Date.now());
 
         if (matchDataForModal) {
@@ -824,6 +925,9 @@ self.addEventListener("message", async function (event) {
           matchDataForModal: matchDataForModal,
           matchStartedDataForModal: matchStartedDataForModal,
           mapBanningDataForModal: mapBanningDataForModal,
+          roundCompletedDataForModal: roundCompletedDataForModal,
+          matchCompletedDataForModal: matchCompletedDataForModal,
+          playerUpdateDataForModal: playerUpdateDataForModal,
           timestamp: Date.now(),
         });
       } catch (error) {

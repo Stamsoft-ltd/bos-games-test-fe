@@ -41,11 +41,23 @@ const LiveMatchPage: React.FC = () => {
   useEffect(() => {
     // Listen for real-time updates
     const handleRoundEnd = (event: CustomEvent) => {
+      console.log("LiveMatch: Round end event received:", event.detail);
       const { roundNumber, winner, team1Score, team2Score, duration } =
         event.detail;
 
       setMatchStats((prev) => {
-        if (!prev) return prev;
+        if (!prev) {
+          console.log(
+            "LiveMatch: No previous match stats available for round update"
+          );
+          return prev;
+        }
+
+        console.log("LiveMatch: Updating match stats with round data:", {
+          currentRound: roundNumber + 1,
+          team1Score,
+          team2Score,
+        });
 
         return {
           ...prev,
@@ -67,10 +79,22 @@ const LiveMatchPage: React.FC = () => {
     };
 
     const handleMatchEnd = (event: CustomEvent) => {
+      console.log("LiveMatch: Match end event received:", event.detail);
       const { winner, finalTeam1Score, finalTeam2Score } = event.detail;
 
       setMatchStats((prev) => {
-        if (!prev) return prev;
+        if (!prev) {
+          console.log(
+            "LiveMatch: No previous match stats available for match end update"
+          );
+          return prev;
+        }
+
+        console.log("LiveMatch: Updating match stats with match end data:", {
+          status: "ended",
+          team1Score: finalTeam1Score,
+          team2Score: finalTeam2Score,
+        });
 
         return {
           ...prev,
@@ -88,16 +112,24 @@ const LiveMatchPage: React.FC = () => {
 
     const handlePlayerUpdate = (event: CustomEvent) => {
       const { steamId, stats } = event.detail;
-      console.log("Player update received:", { steamId, stats });
+      console.log("LiveMatch: Player update event received:", {
+        steamId,
+        stats,
+      });
 
       setMatchStats((prev) => {
-        if (!prev) return prev;
+        if (!prev) {
+          console.log(
+            "LiveMatch: No previous match stats available for player update"
+          );
+          return prev;
+        }
 
         const updatedPlayers = prev.players?.map((player) =>
           player.steamId === steamId ? { ...player, ...stats } : player
         );
 
-        console.log("Updated players:", updatedPlayers);
+        console.log("LiveMatch: Updated players:", updatedPlayers);
 
         return {
           ...prev,

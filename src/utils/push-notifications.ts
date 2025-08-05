@@ -95,7 +95,7 @@ export class PushNotificationService {
         }
 
         // If this is a match acceptance notification, trigger the modal
-        if (payload.data?.action === "accept_match" && payload.data?.matchId) {
+        if (payload.data?.type === "accept_match" && payload.data?.matchId) {
           console.log(
             "Foreground match notification received, triggering modal"
           );
@@ -108,7 +108,7 @@ export class PushNotificationService {
           });
           window.dispatchEvent(event);
         } else if (
-          payload.data?.action === "match_started" &&
+          payload.data?.type === "match_started" &&
           payload.data?.matchId
         ) {
           console.log(
@@ -118,7 +118,7 @@ export class PushNotificationService {
           // Dispatch a custom event that the main app can listen to
           const event = new CustomEvent("matchFound", {
             detail: {
-              type: "MATCH_STARTED",
+              type: "match_started",
               matchId: payload.data.matchId,
               serverIp: payload.data.serverIp,
               serverPort: payload.data.serverPort,
@@ -127,7 +127,7 @@ export class PushNotificationService {
           });
           window.dispatchEvent(event);
         } else if (
-          payload.data?.action === "map_banning_started" &&
+          payload.data?.type === "map_banning_started" &&
           payload.data?.matchId
         ) {
           console.log(
@@ -137,13 +137,13 @@ export class PushNotificationService {
           // Dispatch a custom event that the main app can listen to
           const event = new CustomEvent("matchFound", {
             detail: {
-              type: "MAP_BANNING_STARTED",
+              type: "map_banning_started",
               matchId: payload.data.matchId,
             },
           });
           window.dispatchEvent(event);
         } else if (
-          payload.data?.action === "map_banned" &&
+          payload.data?.type === "map_banned" &&
           payload.data?.matchId
         ) {
           console.log(
@@ -153,7 +153,7 @@ export class PushNotificationService {
           // Dispatch a custom event that the main app can listen to
           const event = new CustomEvent("matchFound", {
             detail: {
-              type: "MAP_BANNED",
+              type: "map_banned",
               matchId: payload.data.matchId,
               bannedMap: payload.data.bannedMap,
               remainingMaps: payload.data.remainingMaps,
@@ -161,7 +161,7 @@ export class PushNotificationService {
           });
           window.dispatchEvent(event);
         } else if (
-          payload.data?.action === "map_banning_complete" &&
+          payload.data?.type === "map_banning_complete" &&
           payload.data?.matchId
         ) {
           console.log(
@@ -171,14 +171,14 @@ export class PushNotificationService {
           // Dispatch a custom event that the main app can listen to
           const event = new CustomEvent("matchFound", {
             detail: {
-              type: "MAP_BANNING_COMPLETE",
+              type: "map_banning_complete",
               matchId: payload.data.matchId,
               selectedMap: payload.data.selectedMap,
             },
           });
           window.dispatchEvent(event);
         } else if (
-          payload.data?.action === "round_completed" &&
+          payload.data?.type === "round_completed" &&
           payload.data?.matchId
         ) {
           console.log(
@@ -186,17 +186,72 @@ export class PushNotificationService {
           );
           console.log("Round completion data:", payload.data);
 
+          // Parse the data properly
+          let parsedData;
+          try {
+            parsedData =
+              typeof payload.data.data === "string"
+                ? JSON.parse(payload.data.data)
+                : payload.data.data;
+          } catch (error) {
+            console.error("Failed to parse payload data:", error);
+            parsedData = null;
+          }
+
           // Dispatch a custom event for round end
-          const event = new CustomEvent("round-end", {
+          const roundEndEvent = new CustomEvent("round-end", {
             detail: {
               matchId: payload.data.matchId,
-              team1Score: (payload.data.data as any)?.team1?.stats?.score,
-              team2Score: (payload.data.data as any)?.team2?.stats?.score,
+              team1Score: parsedData?.team1?.stats?.score,
+              team2Score: parsedData?.team2?.stats?.score,
             },
           });
-          window.dispatchEvent(event);
+          window.dispatchEvent(roundEndEvent);
+
+          // Also dispatch player update events for each player
+          if (parsedData?.players) {
+            console.log(
+              "Dispatching player update events for round completion"
+            );
+            for (const player of parsedData.players) {
+              if (player.steam_id_64 && player.stats) {
+                const playerUpdateEvent = new CustomEvent("player-update", {
+                  detail: {
+                    matchId: payload.data.matchId,
+                    steamId: player.steam_id_64,
+                    stats: {
+                      kills: player.stats.kills || 0,
+                      deaths: player.stats.deaths || 0,
+                      assists: player.stats.assists || 0,
+                      headshotKills: player.stats.kills_with_headshot || 0,
+                      mvps: player.stats.mvps || 0,
+                      score: player.stats.score || 0,
+                      damage: player.stats.damage_dealt || 0,
+                      doubleKills: player.stats["2ks"] || 0,
+                      tripleKills: player.stats["3ks"] || 0,
+                      quadraKills: player.stats["4ks"] || 0,
+                      pentaKills: player.stats["5ks"] || 0,
+                      killsWithPistol: player.stats.kills_with_pistol || 0,
+                      killsWithSniper: player.stats.kills_with_sniper || 0,
+                      entryAttempts: player.stats.entry_attempts || 0,
+                      entrySuccesses: player.stats.entry_successes || 0,
+                      flashesThrown: player.stats.flashes_thrown || 0,
+                      flashesSuccessful: player.stats.flashes_successful || 0,
+                      flashesEnemiesBlinded:
+                        player.stats.flashes_enemies_blinded || 0,
+                      utilityThrown: player.stats.utility_thrown || 0,
+                      utilityDamage: player.stats.utility_damage || 0,
+                      oneVsXAttempts: player.stats["1vX_attempts"] || 0,
+                      oneVsXWins: player.stats["1vX_wins"] || 0,
+                    },
+                  },
+                });
+                window.dispatchEvent(playerUpdateEvent);
+              }
+            }
+          }
         } else if (
-          payload.data?.action === "match_completed" &&
+          payload.data?.type === "match_completed" &&
           payload.data?.matchId
         ) {
           console.log(
@@ -204,18 +259,73 @@ export class PushNotificationService {
           );
           console.log("Match completion data:", payload.data);
 
+          // Parse the data properly
+          let parsedData;
+          try {
+            parsedData =
+              typeof payload.data.data === "string"
+                ? JSON.parse(payload.data.data)
+                : payload.data.data;
+          } catch (error) {
+            console.error("Failed to parse payload data:", error);
+            parsedData = null;
+          }
+
           // Dispatch a custom event for match end
-          const event = new CustomEvent("match-end", {
+          const matchEndEvent = new CustomEvent("match-end", {
             detail: {
               matchId: payload.data.matchId,
               winner: payload.data.winner,
-              finalTeam1Score: (payload.data.data as any)?.team1?.stats?.score,
-              finalTeam2Score: (payload.data.data as any)?.team2?.stats?.score,
+              finalTeam1Score: parsedData?.team1?.stats?.score,
+              finalTeam2Score: parsedData?.team2?.stats?.score,
             },
           });
-          window.dispatchEvent(event);
+          window.dispatchEvent(matchEndEvent);
+
+          // Also dispatch player update events for each player
+          if (parsedData?.players) {
+            console.log(
+              "Dispatching player update events for match completion"
+            );
+            for (const player of parsedData.players) {
+              if (player.steam_id_64 && player.stats) {
+                const playerUpdateEvent = new CustomEvent("player-update", {
+                  detail: {
+                    matchId: payload.data.matchId,
+                    steamId: player.steam_id_64,
+                    stats: {
+                      kills: player.stats.kills || 0,
+                      deaths: player.stats.deaths || 0,
+                      assists: player.stats.assists || 0,
+                      headshotKills: player.stats.kills_with_headshot || 0,
+                      mvps: player.stats.mvps || 0,
+                      score: player.stats.score || 0,
+                      damage: player.stats.damage_dealt || 0,
+                      doubleKills: player.stats["2ks"] || 0,
+                      tripleKills: player.stats["3ks"] || 0,
+                      quadraKills: player.stats["4ks"] || 0,
+                      pentaKills: player.stats["5ks"] || 0,
+                      killsWithPistol: player.stats.kills_with_pistol || 0,
+                      killsWithSniper: player.stats.kills_with_sniper || 0,
+                      entryAttempts: player.stats.entry_attempts || 0,
+                      entrySuccesses: player.stats.entry_successes || 0,
+                      flashesThrown: player.stats.flashes_thrown || 0,
+                      flashesSuccessful: player.stats.flashes_successful || 0,
+                      flashesEnemiesBlinded:
+                        player.stats.flashes_enemies_blinded || 0,
+                      utilityThrown: player.stats.utility_thrown || 0,
+                      utilityDamage: player.stats.utility_damage || 0,
+                      oneVsXAttempts: player.stats["1vX_attempts"] || 0,
+                      oneVsXWins: player.stats["1vX_wins"] || 0,
+                    },
+                  },
+                });
+                window.dispatchEvent(playerUpdateEvent);
+              }
+            }
+          }
         } else if (
-          payload.data?.action === "player_update" &&
+          payload.data?.type === "player_update" &&
           payload.data?.matchId
         ) {
           console.log(

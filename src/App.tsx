@@ -170,7 +170,7 @@ export default function App() {
               icon: "/favicon.ico",
             });
           }
-        } else if (event.data.type === "MATCH_FOUND" && event.data.matchId) {
+        } else if (event.data.type === "accept_match" && event.data.matchId) {
           console.log(
             "Match found, showing acceptance modal:",
             event.data.matchId
@@ -181,7 +181,7 @@ export default function App() {
             isVisible: true,
             timeRemaining: 30,
           });
-        } else if (event.data.type === "MATCH_STARTED" && event.data.matchId) {
+        } else if (event.data.type === "match_started" && event.data.matchId) {
           console.log(
             "Match started, updating server connection modal:",
             event.data.matchId
@@ -236,7 +236,7 @@ export default function App() {
             window.location.href = `/live-match/${event.data.matchId}`;
           }, 60000); // 60 seconds
         } else if (
-          event.data.type === "MAP_BANNING_STARTED" &&
+          event.data.type === "map_banning_started" &&
           event.data.matchId
         ) {
           console.log(
@@ -251,14 +251,14 @@ export default function App() {
             isVisible: true,
           });
         } else if (
-          event.data.type === "ROUND_COMPLETED" &&
+          event.data.type === "round_completed" &&
           event.data.matchId
         ) {
           console.log(
-            "Round completed, dispatching round-end event:",
+            "App: Round completed, dispatching round-end event:",
             event.data.matchId
           );
-          console.log("Round completion data:", event.data);
+          console.log("App: Round completion data:", event.data);
           // Dispatch round-end event for live match updates
           const roundEndEvent = new CustomEvent("round-end", {
             detail: {
@@ -267,16 +267,20 @@ export default function App() {
               team2Score: event.data.team2Score,
             },
           });
+          console.log(
+            "App: Dispatching round-end event from service worker:",
+            roundEndEvent.detail
+          );
           window.dispatchEvent(roundEndEvent);
         } else if (
-          event.data.type === "MATCH_COMPLETED" &&
+          event.data.type === "match_completed" &&
           event.data.matchId
         ) {
           console.log(
-            "Match completed, dispatching match-end event:",
+            "App: Match completed, dispatching match-end event:",
             event.data.matchId
           );
-          console.log("Match completion data:", event.data);
+          console.log("App: Match completion data:", event.data);
           // Dispatch match-end event for live match updates
           const matchEndEvent = new CustomEvent("match-end", {
             detail: {
@@ -286,13 +290,17 @@ export default function App() {
               finalTeam2Score: event.data.finalTeam2Score,
             },
           });
-          window.dispatchEvent(matchEndEvent);
-        } else if (event.data.type === "PLAYER_UPDATE" && event.data.matchId) {
           console.log(
-            "Player update, dispatching player-update event:",
+            "App: Dispatching match-end event from service worker:",
+            matchEndEvent.detail
+          );
+          window.dispatchEvent(matchEndEvent);
+        } else if (event.data.type === "player_update" && event.data.matchId) {
+          console.log(
+            "App: Player update, dispatching player-update event:",
             event.data.matchId
           );
-          console.log("Player update data:", event.data);
+          console.log("App: Player update data:", event.data);
           // Dispatch player-update event for live match updates
           const playerUpdateEvent = new CustomEvent("player-update", {
             detail: {
@@ -301,8 +309,12 @@ export default function App() {
               stats: event.data.stats,
             },
           });
+          console.log(
+            "App: Dispatching player-update event from service worker:",
+            playerUpdateEvent.detail
+          );
           window.dispatchEvent(playerUpdateEvent);
-        } else if (event.data.type === "MAP_BANNED" && event.data.matchId) {
+        } else if (event.data.type === "map_banned" && event.data.matchId) {
           console.log(
             "Map banned, updating map banning modal:",
             event.data.matchId
@@ -783,7 +795,7 @@ export default function App() {
               JSON.stringify(event.data, null, 2)
             );
 
-            if (event.data && event.data.type === "MATCH_FOUND") {
+            if (event.data && event.data.type === "accept_match") {
               console.log(
                 "Found pending match data, showing modal:",
                 event.data
@@ -793,7 +805,7 @@ export default function App() {
                 isVisible: true,
                 timeRemaining: 30,
               });
-            } else if (event.data && event.data.type === "MATCH_STARTED") {
+            } else if (event.data && event.data.type === "match_started") {
               console.log(
                 "Found pending match started data, updating server connection modal:",
                 event.data
@@ -837,7 +849,7 @@ export default function App() {
               }
             } else if (
               event.data &&
-              event.data.type === "MAP_BANNING_STARTED"
+              event.data.type === "map_banning_started"
             ) {
               console.log(
                 "Found pending map banning data, showing map banning modal:",
@@ -886,7 +898,7 @@ export default function App() {
                   isVisible: true,
                 });
               }
-            } else if (event.data && event.data.type === "MAP_BANNED") {
+            } else if (event.data && event.data.type === "map_banned") {
               console.log(
                 "Found pending map banned data, updating map banning modal:",
                 event.data
@@ -920,7 +932,7 @@ export default function App() {
               }
             } else if (
               event.data &&
-              event.data.type === "MAP_BANNING_COMPLETE"
+              event.data.type === "map_banning_complete"
             ) {
               console.log(
                 "Found pending map banning complete data, showing server connection modal:",
@@ -937,6 +949,157 @@ export default function App() {
                 isVisible: true,
                 isLoadingConnectionDetails: true,
               });
+            } else if (event.data && event.data.type === "round_completed") {
+              console.log(
+                "App: Found pending round completed data, dispatching round-end event:",
+                event.data
+              );
+              // Dispatch round-end event for live match updates
+              const roundEndEvent = new CustomEvent("round-end", {
+                detail: {
+                  matchId: event.data.matchId,
+                  team1Score: event.data.team1Score,
+                  team2Score: event.data.team2Score,
+                },
+              });
+              console.log(
+                "App: Dispatching round-end event:",
+                roundEndEvent.detail
+              );
+              window.dispatchEvent(roundEndEvent);
+
+              // Also dispatch player update events for each player
+              if (event.data.players && Array.isArray(event.data.players)) {
+                console.log(
+                  "App: Dispatching player update events for round completion"
+                );
+                for (const player of event.data.players) {
+                  if (player.steam_id_64 && player.stats) {
+                    const playerUpdateEvent = new CustomEvent("player-update", {
+                      detail: {
+                        matchId: event.data.matchId,
+                        steamId: player.steam_id_64,
+                        stats: {
+                          kills: player.stats.kills || 0,
+                          deaths: player.stats.deaths || 0,
+                          assists: player.stats.assists || 0,
+                          headshotKills: player.stats.kills_with_headshot || 0,
+                          mvps: player.stats.mvps || 0,
+                          score: player.stats.score || 0,
+                          damage: player.stats.damage_dealt || 0,
+                          doubleKills: player.stats["2ks"] || 0,
+                          tripleKills: player.stats["3ks"] || 0,
+                          quadraKills: player.stats["4ks"] || 0,
+                          pentaKills: player.stats["5ks"] || 0,
+                          killsWithPistol: player.stats.kills_with_pistol || 0,
+                          killsWithSniper: player.stats.kills_with_sniper || 0,
+                          entryAttempts: player.stats.entry_attempts || 0,
+                          entrySuccesses: player.stats.entry_successes || 0,
+                          flashesThrown: player.stats.flashes_thrown || 0,
+                          flashesSuccessful:
+                            player.stats.flashes_successful || 0,
+                          flashesEnemiesBlinded:
+                            player.stats.flashes_enemies_blinded || 0,
+                          utilityThrown: player.stats.utility_thrown || 0,
+                          utilityDamage: player.stats.utility_damage || 0,
+                          oneVsXAttempts: player.stats["1vX_attempts"] || 0,
+                          oneVsXWins: player.stats["1vX_wins"] || 0,
+                        },
+                      },
+                    });
+                    console.log(
+                      "App: Dispatching player-update event for round completion:",
+                      playerUpdateEvent.detail
+                    );
+                    window.dispatchEvent(playerUpdateEvent);
+                  }
+                }
+              }
+            } else if (event.data && event.data.type === "match_completed") {
+              console.log(
+                "App: Found pending match completed data, dispatching match-end event:",
+                event.data
+              );
+              // Dispatch match-end event for live match updates
+              const matchEndEvent = new CustomEvent("match-end", {
+                detail: {
+                  matchId: event.data.matchId,
+                  winner: event.data.winner,
+                  finalTeam1Score: event.data.finalTeam1Score,
+                  finalTeam2Score: event.data.finalTeam2Score,
+                },
+              });
+              console.log(
+                "App: Dispatching match-end event:",
+                matchEndEvent.detail
+              );
+              window.dispatchEvent(matchEndEvent);
+
+              // Also dispatch player update events for each player
+              if (event.data.players && Array.isArray(event.data.players)) {
+                console.log(
+                  "App: Dispatching player update events for match completion"
+                );
+                for (const player of event.data.players) {
+                  if (player.steam_id_64 && player.stats) {
+                    const playerUpdateEvent = new CustomEvent("player-update", {
+                      detail: {
+                        matchId: event.data.matchId,
+                        steamId: player.steam_id_64,
+                        stats: {
+                          kills: player.stats.kills || 0,
+                          deaths: player.stats.deaths || 0,
+                          assists: player.stats.assists || 0,
+                          headshotKills: player.stats.kills_with_headshot || 0,
+                          mvps: player.stats.mvps || 0,
+                          score: player.stats.score || 0,
+                          damage: player.stats.damage_dealt || 0,
+                          doubleKills: player.stats["2ks"] || 0,
+                          tripleKills: player.stats["3ks"] || 0,
+                          quadraKills: player.stats["4ks"] || 0,
+                          pentaKills: player.stats["5ks"] || 0,
+                          killsWithPistol: player.stats.kills_with_pistol || 0,
+                          killsWithSniper: player.stats.kills_with_sniper || 0,
+                          entryAttempts: player.stats.entry_attempts || 0,
+                          entrySuccesses: player.stats.entry_successes || 0,
+                          flashesThrown: player.stats.flashes_thrown || 0,
+                          flashesSuccessful:
+                            player.stats.flashes_successful || 0,
+                          flashesEnemiesBlinded:
+                            player.stats.flashes_enemies_blinded || 0,
+                          utilityThrown: player.stats.utility_thrown || 0,
+                          utilityDamage: player.stats.utility_damage || 0,
+                          oneVsXAttempts: player.stats["1vX_attempts"] || 0,
+                          oneVsXWins: player.stats["1vX_wins"] || 0,
+                        },
+                      },
+                    });
+                    console.log(
+                      "App: Dispatching player-update event for match completion:",
+                      playerUpdateEvent.detail
+                    );
+                    window.dispatchEvent(playerUpdateEvent);
+                  }
+                }
+              }
+            } else if (event.data && event.data.type === "player_update") {
+              console.log(
+                "App: Found pending player update data, dispatching player-update event:",
+                event.data
+              );
+              // Dispatch player-update event for live match updates
+              const playerUpdateEvent = new CustomEvent("player-update", {
+                detail: {
+                  matchId: event.data.matchId,
+                  steamId: event.data.steamId,
+                  stats: event.data.stats,
+                },
+              });
+              console.log(
+                "App: Dispatching player-update event:",
+                playerUpdateEvent.detail
+              );
+              window.dispatchEvent(playerUpdateEvent);
             } else {
               console.log(
                 "No pending match data found or invalid data:",
