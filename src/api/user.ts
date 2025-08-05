@@ -69,3 +69,13 @@ export async function declineMatchFromNotification(
   );
   return resp.data;
 }
+
+// Update user location (automatically gets IP-based location from middleware)
+export async function updateUserLocation(token: string) {
+  const resp = await axios.patch(
+    `${API_BASE_URL}/users/me/location`,
+    {}, // Empty body - middleware will attach IP-based coordinates
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return resp.data;
+}

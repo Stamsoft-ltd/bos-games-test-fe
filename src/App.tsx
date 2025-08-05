@@ -5,6 +5,7 @@ import { getMe } from "./api/auth";
 import {
   acceptMatchFromNotification,
   declineMatchFromNotification,
+  updateUserLocation,
 } from "./api/user";
 import { PushNotificationService } from "./utils/push-notifications";
 import NotificationBadge from "./components/NotificationBadge";
@@ -66,14 +67,23 @@ export default function App() {
     isLoadingConnectionDetails?: boolean;
   } | null>(null);
 
-  // Get user nickname from API
+  // Get user nickname from API and update location
   useEffect(() => {
     if (isAuthenticated) {
       const token = sessionStorage.getItem("token");
       if (token) {
-        getMe(token)
-          .then((user) => {
+        // Load user data and update location in parallel
+        Promise.all([
+          getMe(token),
+          updateUserLocation(token).catch((error) => {
+            console.warn("Failed to update user location:", error);
+            // Don't fail the entire user loading if location update fails
+            return null;
+          }),
+        ])
+          .then(([user, locationResult]) => {
             console.log("user", user);
+            console.log("location update result", locationResult);
             setUserNickname(user.nickname || "");
             setUserId(user.id || "");
           })
@@ -120,6 +130,33 @@ export default function App() {
         "Skipping push notification initialization - not authenticated or no token"
       );
     }
+  }, [isAuthenticated, token]);
+
+  // Periodic location update (every 5 minutes)
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      return;
+    }
+
+    const updateLocation = () => {
+      updateUserLocation(token)
+        .then((result) => {
+          console.log("Periodic location update successful:", result);
+        })
+        .catch((error) => {
+          console.warn("Periodic location update failed:", error);
+        });
+    };
+
+    // Update location immediately
+    updateLocation();
+
+    // Set up periodic updates every 5 minutes
+    const interval = setInterval(updateLocation, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [isAuthenticated, token]);
 
   // Handle service worker messages for match acceptance
