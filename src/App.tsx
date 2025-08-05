@@ -475,7 +475,7 @@ export default function App() {
       console.log("Foreground match event received:", event.detail);
 
       if (event.detail && event.detail.matchId) {
-        if (event.detail.type === "MATCH_STARTED") {
+        if (event.detail.type === "match_started") {
           console.log(
             "Updating server connection modal for foreground match started message:",
             event.detail.matchId
@@ -523,7 +523,7 @@ export default function App() {
             );
             window.location.href = `/live-match/${event.detail.matchId}`;
           }, 60000); // 60 seconds
-        } else if (event.detail.type === "MAP_BANNING_STARTED") {
+        } else if (event.detail.type === "map_banning_started") {
           console.log(
             "Showing map banning modal for foreground map banning message:",
             event.detail.matchId
@@ -556,7 +556,7 @@ export default function App() {
               isVisible: true,
             });
           }
-        } else if (event.detail.type === "MAP_BANNED") {
+        } else if (event.detail.type === "map_banned") {
           console.log(
             "Updating map banning modal for foreground map banned message:",
             event.detail.matchId
@@ -674,7 +674,7 @@ export default function App() {
             // Execute the retry logic
             fetchSessionWithRetry();
           }
-        } else if (event.detail.type === "MAP_BANNING_COMPLETE") {
+        } else if (event.detail.type === "map_banning_complete") {
           console.log(
             "Closing map banning modal for foreground map banning complete message:",
             event.detail.matchId
