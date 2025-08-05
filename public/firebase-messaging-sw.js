@@ -88,7 +88,7 @@ messaging.onBackgroundMessage(async (payload) => {
     tag: payload.data?.tag || "default",
     data: payload.data || {},
     actions:
-      payload.data?.type === "accept_match"
+      payload.data?.type === "match_found"
         ? [
             {
               action: "accept_match",
@@ -142,6 +142,24 @@ messaging.onBackgroundMessage(async (payload) => {
               icon: "/favicon.ico",
             },
           ]
+        : payload.data?.type === "party_invite"
+        ? [
+            {
+              action: "accept_party",
+              title: "Accept",
+              icon: "/favicon.ico",
+            },
+            {
+              action: "decline_party",
+              title: "Decline",
+              icon: "/favicon.ico",
+            },
+            {
+              action: "close",
+              title: "Close",
+              icon: "/favicon.ico",
+            },
+          ]
         : [
             {
               action: "view",
@@ -155,9 +173,10 @@ messaging.onBackgroundMessage(async (payload) => {
             },
           ],
     requireInteraction: [
-      "accept_match",
+      "match_found",
       "friend_request",
       "team_invite",
+      "party_invite",
     ].includes(payload.data?.type),
     silent: false,
   };
@@ -169,14 +188,14 @@ messaging.onBackgroundMessage(async (payload) => {
   );
 
   // If this is a match acceptance notification, also send a message to the app to show the modal
-  if (payload.data?.type === "accept_match" && payload.data?.matchId) {
+  if (payload.data?.type === "match_found" && payload.data?.matchId) {
     console.log(
       "Background match notification received, will trigger modal when app becomes active"
     );
 
     // Store the match data for when the app becomes active
     const matchData = {
-      type: "accept_match",
+      type: "match_found",
       matchId: payload.data.matchId,
       timestamp: Date.now(),
     };

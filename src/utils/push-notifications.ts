@@ -95,7 +95,7 @@ export class PushNotificationService {
         }
 
         // If this is a match acceptance notification, trigger the modal
-        if (payload.data?.type === "accept_match" && payload.data?.matchId) {
+        if (payload.data?.type === "match_found" && payload.data?.matchId) {
           console.log(
             "Foreground match notification received, triggering modal"
           );

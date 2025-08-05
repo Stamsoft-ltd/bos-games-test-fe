@@ -170,7 +170,7 @@ export default function App() {
               icon: "/favicon.ico",
             });
           }
-        } else if (event.data.type === "accept_match" && event.data.matchId) {
+        } else if (event.data.type === "match_found" && event.data.matchId) {
           console.log(
             "Match found, showing acceptance modal:",
             event.data.matchId
@@ -795,7 +795,7 @@ export default function App() {
               JSON.stringify(event.data, null, 2)
             );
 
-            if (event.data && event.data.type === "accept_match") {
+            if (event.data && event.data.type === "match_found") {
               console.log(
                 "Found pending match data, showing modal:",
                 event.data
