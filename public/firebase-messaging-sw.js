@@ -226,6 +226,69 @@ messaging.onBackgroundMessage(async (payload) => {
     return Promise.all([notificationPromise, messagePromise]);
   }
 
+  // If this is a round completed notification, send a message to update the live match
+  if (payload.data?.action === "round_completed" && payload.data?.matchId) {
+    console.log(
+      "Background round completed notification received, will update live match when app becomes active"
+    );
+
+    // Store the round completion data for when the app becomes active
+    const roundCompletedData = {
+      type: "ROUND_COMPLETED",
+      matchId: payload.data.matchId,
+      team1Score: payload.data.data?.team1?.stats?.score,
+      team2Score: payload.data.data?.team2?.stats?.score,
+      timestamp: Date.now(),
+    };
+
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("roundCompletedDataForModal", roundCompletedData);
+
+    // Also try to send message to any active clients immediately
+    const messagePromise = clients.matchAll().then(function (clientList) {
+      clientList.forEach(function (client) {
+        console.log(
+          "Sending ROUND_COMPLETED message to active client for live match update"
+        );
+        client.postMessage(roundCompletedData);
+      });
+    });
+
+    return Promise.all([notificationPromise, messagePromise]);
+  }
+
+  // If this is a match completed notification, send a message to update the live match
+  if (payload.data?.action === "match_completed" && payload.data?.matchId) {
+    console.log(
+      "Background match completed notification received, will update live match when app becomes active"
+    );
+
+    // Store the match completion data for when the app becomes active
+    const matchCompletedData = {
+      type: "MATCH_COMPLETED",
+      matchId: payload.data.matchId,
+      winner: payload.data.winner,
+      finalTeam1Score: payload.data.data?.team1?.stats?.score,
+      finalTeam2Score: payload.data.data?.team2?.stats?.score,
+      timestamp: Date.now(),
+    };
+
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("matchCompletedDataForModal", matchCompletedData);
+
+    // Also try to send message to any active clients immediately
+    const messagePromise = clients.matchAll().then(function (clientList) {
+      clientList.forEach(function (client) {
+        console.log(
+          "Sending MATCH_COMPLETED message to active client for live match update"
+        );
+        client.postMessage(matchCompletedData);
+      });
+    });
+
+    return Promise.all([notificationPromise, messagePromise]);
+  }
+
   // If this is a map banning started notification, also send a message to the app to show the map banning modal
   if (payload.data?.action === "map_banning_started" && payload.data?.matchId) {
     console.log(

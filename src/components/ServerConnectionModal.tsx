@@ -58,11 +58,11 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
 
     // Use steam://connect to try connecting to already running CS2 first
     // If CS2 is not running, it will launch it automatically
-    const steamUrl = `steam://rungameid/730//+connect ${serverIp}:${serverPort}`;
+    const steamUrl = `steam://run/730//+connect ${serverIp}:${serverPort}`;
 
     try {
-      // Try to open the Steam URL
-      window.location.href = steamUrl;
+      // Try to open in new tab first, fallback to current window
+      window.open(steamUrl, "_blank");
 
       // Call the callback if provided
       if (onLaunchGame) {
@@ -71,9 +71,14 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
 
       console.log("Connecting to CS2 server...");
     } catch (error) {
-      console.error("Failed to connect to game:", error);
-      // Fallback: copy connection string and show instructions
-      handleCopyConnectionInfo();
+      console.log("Failed to open in new tab, trying current window:", error);
+      try {
+        window.location.href = steamUrl;
+      } catch (fallbackError) {
+        console.error("Failed to connect to game:", fallbackError);
+        // Fallback: copy connection string and show instructions
+        handleCopyConnectionInfo();
+      }
     }
   };
 

@@ -393,8 +393,18 @@ const LiveMatchPage: React.FC = () => {
               onClick={() => {
                 // Use steam://connect to try connecting to already running CS2 first
                 // If CS2 is not running, it will launch it automatically
-                const steamUrl = `steam://rungameid/730//+connect ${matchStats.serverIp}:${matchStats.serverPort}`;
-                window.location.href = steamUrl;
+                const steamUrl = `steam://run/730//+connect ${matchStats.serverIp}:${matchStats.serverPort}`;
+
+                // Try to open in new tab first, fallback to current window
+                try {
+                  window.open(steamUrl, "_blank");
+                } catch (error) {
+                  console.log(
+                    "Failed to open in new tab, trying current window:",
+                    error
+                  );
+                  window.location.href = steamUrl;
+                }
               }}
               className="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
             >

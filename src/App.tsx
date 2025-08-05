@@ -250,6 +250,43 @@ export default function App() {
             session: null, // Will be fetched via polling
             isVisible: true,
           });
+        } else if (
+          event.data.type === "ROUND_COMPLETED" &&
+          event.data.matchId
+        ) {
+          console.log(
+            "Round completed, dispatching round-end event:",
+            event.data.matchId
+          );
+          console.log("Round completion data:", event.data);
+          // Dispatch round-end event for live match updates
+          const roundEndEvent = new CustomEvent("round-end", {
+            detail: {
+              matchId: event.data.matchId,
+              team1Score: event.data.team1Score,
+              team2Score: event.data.team2Score,
+            },
+          });
+          window.dispatchEvent(roundEndEvent);
+        } else if (
+          event.data.type === "MATCH_COMPLETED" &&
+          event.data.matchId
+        ) {
+          console.log(
+            "Match completed, dispatching match-end event:",
+            event.data.matchId
+          );
+          console.log("Match completion data:", event.data);
+          // Dispatch match-end event for live match updates
+          const matchEndEvent = new CustomEvent("match-end", {
+            detail: {
+              matchId: event.data.matchId,
+              winner: event.data.winner,
+              finalTeam1Score: event.data.finalTeam1Score,
+              finalTeam2Score: event.data.finalTeam2Score,
+            },
+          });
+          window.dispatchEvent(matchEndEvent);
         } else if (event.data.type === "MAP_BANNED" && event.data.matchId) {
           console.log(
             "Map banned, updating map banning modal:",
@@ -1106,6 +1143,23 @@ export default function App() {
               >
                 Live Matches
               </Link>
+              <button
+                onClick={() => {
+                  const steamUrl = `steam://run/730//+connect chanticos.dathost.net:26952`;
+                  try {
+                    window.open(steamUrl, "_blank");
+                  } catch (error) {
+                    console.log(
+                      "Failed to open in new tab, trying current window:",
+                      error
+                    );
+                    window.location.href = steamUrl;
+                  }
+                }}
+                className="text-indigo-500 hover:underline"
+              >
+                🧪 Test Server
+              </button>
               <Link
                 to="/notifications"
                 className="text-indigo-500 hover:underline relative"
