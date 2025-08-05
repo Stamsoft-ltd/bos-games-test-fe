@@ -71,6 +71,14 @@ messaging.onBackgroundMessage(async (payload) => {
   console.log("Action check:", payload.data?.action);
   console.log("MatchId check:", payload.data?.matchId);
   console.log("Full payload structure:", JSON.stringify(payload, null, 2));
+  if (payload.data.data) {
+    try {
+      payload.data.data = JSON.parse(payload.data.data);
+      console.log("Parsed data field:", payload.data.data);
+    } catch (error) {
+      console.log("Error parsing data field:", error);
+    }
+  }
 
   const notificationTitle = payload.notification?.title || "BOS Games";
   const notificationOptions = {

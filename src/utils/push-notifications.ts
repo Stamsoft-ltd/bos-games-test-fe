@@ -82,6 +82,18 @@ export class PushNotificationService {
         console.log("Foreground action check:", payload.data?.action);
         console.log("Foreground matchId check:", payload.data?.matchId);
 
+        if (payload?.data?.data) {
+          console.log("Foreground message data:", payload.data.data);
+          try {
+            payload.data.data = JSON.parse(payload.data.data);
+          } catch (e) {
+            console.error(
+              "Failed to parse data field in foreground message",
+              e
+            );
+          }
+        }
+
         // If this is a match acceptance notification, trigger the modal
         if (payload.data?.action === "accept_match" && payload.data?.matchId) {
           console.log(
