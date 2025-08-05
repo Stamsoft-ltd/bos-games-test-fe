@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getMyNotifications,
   markNotificationAsRead,
@@ -7,6 +8,7 @@ import {
 } from "../api/notifications";
 
 export default function Notifications() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +101,31 @@ export default function Notifications() {
     }
   };
 
+  const handleViewLiveMatch = (matchId: string) => {
+    navigate(`/live-match/${matchId}`);
+  };
+
+  const isMatchRelatedNotification = (type: string) => {
+    return ["match_started", "round_completed", "match_completed"].includes(
+      type
+    );
+  };
+
+  const getMatchIdFromNotification = (
+    notification: Notification
+  ): string | null => {
+    // Extract match ID from notification data or body
+    if (notification.data?.matchId) {
+      return notification.data.matchId;
+    }
+
+    // Try to extract from body text (fallback)
+    const matchIdMatch = notification.body.match(
+      /match[:\s-]*([a-zA-Z0-9-_]+)/i
+    );
+    return matchIdMatch ? matchIdMatch[1] : null;
+  };
+
   if (!token) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -172,14 +199,30 @@ export default function Notifications() {
                     )}
                   </div>
                 </div>
-                {!notification.read && (
-                  <button
-                    onClick={() => handleMarkAsRead(notification.id)}
-                    className="ml-4 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    Mark Read
-                  </button>
-                )}
+                <div className="flex flex-col space-y-2 ml-4">
+                  {!notification.read && (
+                    <button
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Mark Read
+                    </button>
+                  )}
+                  {isMatchRelatedNotification(notification.type) && (
+                    <button
+                      onClick={() => {
+                        const matchId =
+                          getMatchIdFromNotification(notification);
+                        if (matchId) {
+                          handleViewLiveMatch(matchId);
+                        }
+                      }}
+                      className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      📊 View Live
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))

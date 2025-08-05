@@ -22,6 +22,8 @@ import Parties from "./pages/Parties";
 import Notifications from "./pages/Notifications";
 import SocialAuth from "./pages/SocialAuth";
 import HardwareProfile from "./pages/HardwareProfile";
+import LiveMatch from "./pages/LiveMatch";
+import LiveMatches from "./pages/LiveMatches";
 import {
   MapBanSession,
   getMapBanSession,
@@ -225,6 +227,14 @@ export default function App() {
             console.log("New modal state:", newModal);
             setServerConnection(newModal);
           }
+
+          // Set 60-second timeout to redirect to live match page
+          setTimeout(() => {
+            console.log(
+              "60-second timeout reached, redirecting to live match page"
+            );
+            window.location.href = `/live-match/${event.data.matchId}`;
+          }, 60000); // 60 seconds
         } else if (
           event.data.type === "MAP_BANNING_STARTED" &&
           event.data.matchId
@@ -441,6 +451,14 @@ export default function App() {
               isLoadingConnectionDetails: false,
             });
           }
+
+          // Set 60-second timeout to redirect to live match page
+          setTimeout(() => {
+            console.log(
+              "60-second timeout reached, redirecting to live match page"
+            );
+            window.location.href = `/live-match/${event.detail.matchId}`;
+          }, 60000); // 60 seconds
         } else if (event.detail.type === "MAP_BANNING_STARTED") {
           console.log(
             "Showing map banning modal for foreground map banning message:",
@@ -1014,6 +1032,11 @@ export default function App() {
     // You could show a toast notification here
   };
 
+  const handleLaunchGame = () => {
+    console.log("Launching CS2 game...");
+    // You can add additional logging or analytics here
+  };
+
   // Map banning handlers
   const handleMapBanningTimeout = async () => {
     if (!mapBanning || !token) return;
@@ -1078,6 +1101,12 @@ export default function App() {
                 Hardware
               </Link>
               <Link
+                to="/live-matches"
+                className="text-indigo-500 hover:underline"
+              >
+                Live Matches
+              </Link>
+              <Link
                 to="/notifications"
                 className="text-indigo-500 hover:underline relative"
               >
@@ -1115,6 +1144,8 @@ export default function App() {
           <Route path="/parties" element={<Parties />} />
           <Route path="/hardware" element={<HardwareProfile />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/live-matches" element={<LiveMatches />} />
+          <Route path="/live-match/:matchId" element={<LiveMatch />} />
         </Routes>
       </main>
 
@@ -1142,6 +1173,7 @@ export default function App() {
           }
           onClose={handleServerConnectionClose}
           onCopyConnectionInfo={handleCopyConnectionInfo}
+          onLaunchGame={handleLaunchGame}
         />
       )}
 

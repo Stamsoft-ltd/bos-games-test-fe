@@ -9,6 +9,7 @@ interface ServerConnectionModalProps {
   isLoadingConnectionDetails?: boolean;
   onClose: () => void;
   onCopyConnectionInfo: () => void;
+  onLaunchGame?: () => void;
 }
 
 const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
@@ -20,6 +21,7 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
   isLoadingConnectionDetails = false,
   onClose,
   onCopyConnectionInfo,
+  onLaunchGame,
 }) => {
   if (!isVisible) return null;
 
@@ -48,35 +50,61 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
     }
   };
 
+  const handleLaunchGame = () => {
+    if (!serverIp || !serverPort) {
+      console.log("Server details not available");
+      return;
+    }
+
+    // Steam URL protocol to launch CS2 and connect to server
+    const steamUrl = `steam://rungameid/730//+connect ${serverIp}:${serverPort}`;
+
+    try {
+      // Try to open the Steam URL
+      window.location.href = steamUrl;
+
+      // Call the callback if provided
+      if (onLaunchGame) {
+        onLaunchGame();
+      }
+
+      console.log("Launching CS2 with server connection...");
+    } catch (error) {
+      console.error("Failed to launch game:", error);
+      // Fallback: copy connection string and show instructions
+      handleCopyConnectionInfo();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="text-center">
           {/* Header */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-gray-800 mb-1">
               🎮 Match Started!
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm">
               Your match is ready. Connect to the server below.
             </p>
           </div>
 
           {/* Selected Map */}
           {selectedMap && (
-            <div className="bg-green-50 rounded-lg p-4 mb-6">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">
+            <div className="bg-green-50 rounded-lg p-3 mb-4">
+              <h3 className="text-sm font-semibold text-green-800 mb-1">
                 🗺️ Selected Map
               </h3>
-              <div className="text-xl font-bold text-green-900 capitalize">
+              <div className="text-lg font-bold text-green-900 capitalize">
                 {selectedMap.replace(/_/g, " ")}
               </div>
             </div>
           )}
 
           {/* Server Connection Info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">
               Server Connection Details
             </h3>
 
@@ -134,9 +162,9 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Server Address
                   </label>
                   <div className="flex items-center space-x-2">
@@ -144,12 +172,12 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
                       type="text"
                       value={connectionString}
                       readOnly
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 font-mono text-sm"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded-md bg-white text-gray-900 font-mono text-xs"
                     />
                     <button
                       onClick={handleCopyConnectionInfo}
                       disabled={!connectionString}
-                      className={`px-4 py-2 rounded-md transition-colors text-sm ${
+                      className={`px-3 py-1 rounded-md transition-colors text-xs ${
                         connectionString
                           ? "bg-blue-600 text-white hover:bg-blue-700"
                           : "bg-gray-400 text-gray-600 cursor-not-allowed"
@@ -160,20 +188,20 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       IP Address
                     </label>
-                    <div className="px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm">
+                    <div className="px-2 py-1 bg-white border border-gray-300 rounded-md font-mono text-xs">
                       {serverIp || "Not available"}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Port
                     </label>
-                    <div className="px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm">
+                    <div className="px-2 py-1 bg-white border border-gray-300 rounded-md font-mono text-xs">
                       {serverPort || "Not available"}
                     </div>
                   </div>
@@ -183,48 +211,80 @@ const ServerConnectionModal: React.FC<ServerConnectionModalProps> = ({
           </div>
 
           {/* Match ID */}
-          <div className="bg-blue-50 rounded-lg p-3 mb-6">
-            <label className="block text-sm font-medium text-blue-800 mb-1">
+          <div className="bg-blue-50 rounded-lg p-2 mb-4">
+            <label className="block text-xs font-medium text-blue-800 mb-1">
               Match ID
             </label>
-            <div className="font-mono text-sm text-blue-900 break-all">
+            <div className="font-mono text-xs text-blue-900 break-all">
               {matchId}
             </div>
           </div>
 
           {/* Instructions */}
-          <div className="bg-yellow-50 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-yellow-800 mb-2">
+          <div className="bg-yellow-50 rounded-lg p-3 mb-4">
+            <h4 className="text-sm font-semibold text-yellow-800 mb-2">
               How to Connect:
             </h4>
-            <ol className="text-sm text-yellow-700 space-y-1 text-left">
-              <li>1. Open Counter-Strike 2</li>
-              <li>2. Go to "Play" → "Community Servers"</li>
-              <li>3. Click "Connect to a server"</li>
-              <li>4. Enter the server address above</li>
-              <li>5. Click "Connect"</li>
-            </ol>
+            <div className="text-xs text-yellow-700 space-y-2">
+              <div className="bg-green-50 p-2 rounded border border-green-200">
+                <p className="font-semibold text-green-800 mb-1 text-xs">
+                  🚀 Quick Connect:
+                </p>
+                <p className="text-green-700 text-xs">
+                  Click "Launch CS2 & Connect" above to automatically open the
+                  game and connect to the server.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-yellow-800 mb-1 text-xs">
+                  Manual Connect:
+                </p>
+                <ol className="space-y-1 text-left text-xs">
+                  <li>1. Open Counter-Strike 2</li>
+                  <li>2. Go to "Play" → "Community Servers"</li>
+                  <li>3. Click "Connect to a server"</li>
+                  <li>4. Enter the server address above</li>
+                  <li>5. Click "Connect"</li>
+                </ol>
+              </div>
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3">
+          <div className="space-y-2">
+            {/* Launch Game Button */}
             <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
-            >
-              Close
-            </button>
-            <button
-              onClick={handleCopyConnectionInfo}
+              onClick={handleLaunchGame}
               disabled={!connectionString || isLoadingConnectionDetails}
-              className={`flex-1 px-4 py-2 rounded-md transition-colors ${
+              className={`w-full px-3 py-2 rounded-md transition-colors font-semibold text-sm ${
                 connectionString && !isLoadingConnectionDetails
-                  ? "bg-green-600 text-white hover:bg-green-700"
+                  ? "bg-orange-600 text-white hover:bg-orange-700 shadow-lg"
                   : "bg-gray-400 text-gray-600 cursor-not-allowed"
               }`}
             >
-              Copy & Close
+              🎮 Launch CS2 & Connect
             </button>
+
+            {/* Secondary Actions */}
+            <div className="flex space-x-2">
+              <button
+                onClick={onClose}
+                className="flex-1 px-3 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors text-sm"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleCopyConnectionInfo}
+                disabled={!connectionString || isLoadingConnectionDetails}
+                className={`flex-1 px-3 py-2 rounded-md transition-colors text-sm ${
+                  connectionString && !isLoadingConnectionDetails
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-gray-400 text-gray-600 cursor-not-allowed"
+                }`}
+              >
+                Copy & Close
+              </button>
+            </div>
           </div>
         </div>
       </div>
