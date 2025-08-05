@@ -287,6 +287,21 @@ export default function App() {
             },
           });
           window.dispatchEvent(matchEndEvent);
+        } else if (event.data.type === "PLAYER_UPDATE" && event.data.matchId) {
+          console.log(
+            "Player update, dispatching player-update event:",
+            event.data.matchId
+          );
+          console.log("Player update data:", event.data);
+          // Dispatch player-update event for live match updates
+          const playerUpdateEvent = new CustomEvent("player-update", {
+            detail: {
+              matchId: event.data.matchId,
+              steamId: event.data.steamId,
+              stats: event.data.stats,
+            },
+          });
+          window.dispatchEvent(playerUpdateEvent);
         } else if (event.data.type === "MAP_BANNED" && event.data.matchId) {
           console.log(
             "Map banned, updating map banning modal:",
@@ -1145,16 +1160,64 @@ export default function App() {
               </Link>
               <button
                 onClick={() => {
+                  // Multiple approaches to handle fullscreen game focus issues
                   const steamUrl = `steam://run/730//+connect chanticos.dathost.net:26952`;
-                  try {
-                    window.open(steamUrl, "_blank");
-                  } catch (error) {
-                    console.log(
-                      "Failed to open in new tab, trying current window:",
-                      error
-                    );
-                    window.location.href = steamUrl;
-                  }
+                  const steamConnectUrl = `steam://connect/chanticos.dathost.net:26952`;
+
+                  console.log("Attempting to connect to test server:", {
+                    steamUrl,
+                    steamConnectUrl,
+                  });
+
+                  // Try multiple approaches to handle fullscreen game focus
+                  const tryConnect = async () => {
+                    try {
+                      // First attempt: Try the run command (launches if not running, connects if running)
+                      console.log("Attempt 1: Using steam://run command");
+                      window.open(steamUrl, "_blank");
+
+                      // Wait a moment then try alternative approach
+                      setTimeout(() => {
+                        try {
+                          // Second attempt: Try direct connect (may work better with fullscreen)
+                          console.log(
+                            "Attempt 2: Using steam://connect command"
+                          );
+                          window.open(steamConnectUrl, "_blank");
+                        } catch (error) {
+                          console.log("Direct connect failed:", error);
+                          // Third attempt: Fallback to current window
+                          try {
+                            console.log("Attempt 3: Using current window");
+                            window.location.href = steamUrl;
+                          } catch (fallbackError) {
+                            console.error(
+                              "All connection attempts failed:",
+                              fallbackError
+                            );
+                            // Show user instructions
+                            alert(
+                              `Unable to automatically connect to CS2.\n\nPlease manually connect to:\nchanticos.dathost.net:26952\n\nIf CS2 is running in fullscreen, try:\n1. Alt+Tab to CS2\n2. Press F12 to open console\n3. Type: connect chanticos.dathost.net:26952`
+                            );
+                          }
+                        }
+                      }, 1000);
+                    } catch (error) {
+                      console.log("Initial connection attempt failed:", error);
+                      // Try direct connect as fallback
+                      try {
+                        window.open(steamConnectUrl, "_blank");
+                      } catch (directError) {
+                        console.error(
+                          "Direct connect also failed:",
+                          directError
+                        );
+                        window.location.href = steamUrl;
+                      }
+                    }
+                  };
+
+                  tryConnect();
                 }}
                 className="text-indigo-500 hover:underline"
               >

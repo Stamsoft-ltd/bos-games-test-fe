@@ -8,6 +8,22 @@ export interface LiveMatchPlayer {
   mvps: number;
   headshotKills: number;
   damage: number;
+  score: number;
+  doubleKills: number;
+  tripleKills: number;
+  quadraKills: number;
+  pentaKills: number;
+  killsWithPistol: number;
+  killsWithSniper: number;
+  entryAttempts: number;
+  entrySuccesses: number;
+  flashesThrown: number;
+  flashesSuccessful: number;
+  flashesEnemiesBlinded: number;
+  utilityThrown: number;
+  utilityDamage: number;
+  oneVsXAttempts: number;
+  oneVsXWins: number;
   connected: boolean;
 }
 
@@ -85,4 +101,3 @@ export async function getLiveMatch(
 
   return response.json();
 }
- 

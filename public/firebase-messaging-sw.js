@@ -239,6 +239,7 @@ messaging.onBackgroundMessage(async (payload) => {
     console.log(
       "Background round completed notification received, will update live match when app becomes active"
     );
+    console.log("Round completion payload data:", payload.data);
 
     // Store the round completion data for when the app becomes active
     const roundCompletedData = {
@@ -249,11 +250,14 @@ messaging.onBackgroundMessage(async (payload) => {
       timestamp: Date.now(),
     };
 
+    console.log("Round completed data to store:", roundCompletedData);
+
     // Store in persistent storage for persistence across service worker restarts
     await swStorage.set("roundCompletedDataForModal", roundCompletedData);
 
     // Also try to send message to any active clients immediately
     const messagePromise = clients.matchAll().then(function (clientList) {
+      console.log("Active clients found:", clientList.length);
       clientList.forEach(function (client) {
         console.log(
           "Sending ROUND_COMPLETED message to active client for live match update"
@@ -270,6 +274,7 @@ messaging.onBackgroundMessage(async (payload) => {
     console.log(
       "Background match completed notification received, will update live match when app becomes active"
     );
+    console.log("Match completion payload data:", payload.data);
 
     // Store the match completion data for when the app becomes active
     const matchCompletedData = {
@@ -281,16 +286,57 @@ messaging.onBackgroundMessage(async (payload) => {
       timestamp: Date.now(),
     };
 
+    console.log("Match completed data to store:", matchCompletedData);
+
     // Store in persistent storage for persistence across service worker restarts
     await swStorage.set("matchCompletedDataForModal", matchCompletedData);
 
     // Also try to send message to any active clients immediately
     const messagePromise = clients.matchAll().then(function (clientList) {
+      console.log(
+        "Active clients found for match completion:",
+        clientList.length
+      );
       clientList.forEach(function (client) {
         console.log(
           "Sending MATCH_COMPLETED message to active client for live match update"
         );
         client.postMessage(matchCompletedData);
+      });
+    });
+
+    return Promise.all([notificationPromise, messagePromise]);
+  }
+
+  // If this is a player update notification, send a message to update the live match
+  if (payload.data?.action === "player_update" && payload.data?.matchId) {
+    console.log(
+      "Background player update notification received, will update live match when app becomes active"
+    );
+    console.log("Player update payload data:", payload.data);
+
+    // Store the player update data for when the app becomes active
+    const playerUpdateData = {
+      type: "PLAYER_UPDATE",
+      matchId: payload.data.matchId,
+      steamId: payload.data.steamId,
+      stats: payload.data.stats,
+      timestamp: Date.now(),
+    };
+
+    console.log("Player update data to store:", playerUpdateData);
+
+    // Store in persistent storage for persistence across service worker restarts
+    await swStorage.set("playerUpdateDataForModal", playerUpdateData);
+
+    // Also try to send message to any active clients immediately
+    const messagePromise = clients.matchAll().then(function (clientList) {
+      console.log("Active clients found for player update:", clientList.length);
+      clientList.forEach(function (client) {
+        console.log(
+          "Sending PLAYER_UPDATE message to active client for live match update"
+        );
+        client.postMessage(playerUpdateData);
       });
     });
 

@@ -88,15 +88,20 @@ const LiveMatchPage: React.FC = () => {
 
     const handlePlayerUpdate = (event: CustomEvent) => {
       const { steamId, stats } = event.detail;
+      console.log("Player update received:", { steamId, stats });
 
       setMatchStats((prev) => {
         if (!prev) return prev;
 
+        const updatedPlayers = prev.players?.map((player) =>
+          player.steamId === steamId ? { ...player, ...stats } : player
+        );
+
+        console.log("Updated players:", updatedPlayers);
+
         return {
           ...prev,
-          players: prev.players?.map((player) =>
-            player.steamId === steamId ? { ...player, ...stats } : player
-          ),
+          players: updatedPlayers,
         };
       });
     };
@@ -257,32 +262,118 @@ const LiveMatchPage: React.FC = () => {
             </h2>
             <div className="space-y-3">
               {getTeamPlayers(1).map((player) => (
-                <div
-                  key={player.steamId}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        player.connected ? "bg-green-400" : "bg-red-400"
-                      }`}
-                    ></div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {player.nickname}
+                <div key={player.steamId} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          player.connected ? "bg-green-400" : "bg-red-400"
+                        }`}
+                      ></div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {player.nickname}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          K/D: {player.kills}/{player.deaths} | Score:{" "}
+                          {player.score}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        {player.kills} kills
                       </p>
                       <p className="text-xs text-gray-500">
-                        K/D: {player.kills}/{player.deaths}
+                        {player.assists} assists | {player.mvps} MVPs
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {player.kills} kills
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {player.assists} assists
-                    </p>
+
+                  {/* Detailed Statistics */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Headshots:</span>
+                        <span className="font-medium">
+                          {player.headshotKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pistol Kills:</span>
+                        <span className="font-medium">
+                          {player.killsWithPistol}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Sniper Kills:</span>
+                        <span className="font-medium">
+                          {player.killsWithSniper}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Damage:</span>
+                        <span className="font-medium">{player.damage}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Double Kills:</span>
+                        <span className="font-medium">
+                          {player.doubleKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Triple Kills:</span>
+                        <span className="font-medium">
+                          {player.tripleKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Quadra Kills:</span>
+                        <span className="font-medium">
+                          {player.quadraKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Penta Kills:</span>
+                        <span className="font-medium">{player.pentaKills}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Utility and Entry Stats */}
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Entry Success:</span>
+                          <span className="font-medium">
+                            {player.entrySuccesses}/{player.entryAttempts}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">1vX Wins:</span>
+                          <span className="font-medium">
+                            {player.oneVsXWins}/{player.oneVsXAttempts}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Flashes:</span>
+                          <span className="font-medium">
+                            {player.flashesSuccessful}/{player.flashesThrown}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Utility DMG:</span>
+                          <span className="font-medium">
+                            {player.utilityDamage}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -296,32 +387,118 @@ const LiveMatchPage: React.FC = () => {
             </h2>
             <div className="space-y-3">
               {getTeamPlayers(2).map((player) => (
-                <div
-                  key={player.steamId}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        player.connected ? "bg-green-400" : "bg-red-400"
-                      }`}
-                    ></div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {player.nickname}
+                <div key={player.steamId} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          player.connected ? "bg-green-400" : "bg-red-400"
+                        }`}
+                      ></div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {player.nickname}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          K/D: {player.kills}/{player.deaths} | Score:{" "}
+                          {player.score}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        {player.kills} kills
                       </p>
                       <p className="text-xs text-gray-500">
-                        K/D: {player.kills}/{player.deaths}
+                        {player.assists} assists | {player.mvps} MVPs
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {player.kills} kills
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {player.assists} assists
-                    </p>
+
+                  {/* Detailed Statistics */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Headshots:</span>
+                        <span className="font-medium">
+                          {player.headshotKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pistol Kills:</span>
+                        <span className="font-medium">
+                          {player.killsWithPistol}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Sniper Kills:</span>
+                        <span className="font-medium">
+                          {player.killsWithSniper}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Damage:</span>
+                        <span className="font-medium">{player.damage}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Double Kills:</span>
+                        <span className="font-medium">
+                          {player.doubleKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Triple Kills:</span>
+                        <span className="font-medium">
+                          {player.tripleKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Quadra Kills:</span>
+                        <span className="font-medium">
+                          {player.quadraKills}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Penta Kills:</span>
+                        <span className="font-medium">{player.pentaKills}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Utility and Entry Stats */}
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Entry Success:</span>
+                          <span className="font-medium">
+                            {player.entrySuccesses}/{player.entryAttempts}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">1vX Wins:</span>
+                          <span className="font-medium">
+                            {player.oneVsXWins}/{player.oneVsXAttempts}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Flashes:</span>
+                          <span className="font-medium">
+                            {player.flashesSuccessful}/{player.flashesThrown}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Utility DMG:</span>
+                          <span className="font-medium">
+                            {player.utilityDamage}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -330,7 +507,7 @@ const LiveMatchPage: React.FC = () => {
         </div>
 
         {/* Round History */}
-        {matchStats.roundHistory && matchStats.roundHistory.length > 0 && (
+        {/* {matchStats.roundHistory && matchStats.roundHistory.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Round History
@@ -378,7 +555,7 @@ const LiveMatchPage: React.FC = () => {
                 ))}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Action Buttons */}
         <div className="flex justify-center space-x-4 mt-6">
@@ -391,20 +568,61 @@ const LiveMatchPage: React.FC = () => {
           {matchStats.serverIp && matchStats.serverPort && (
             <button
               onClick={() => {
-                // Use steam://connect to try connecting to already running CS2 first
-                // If CS2 is not running, it will launch it automatically
+                // Multiple approaches to handle fullscreen game focus issues
                 const steamUrl = `steam://run/730//+connect ${matchStats.serverIp}:${matchStats.serverPort}`;
+                const steamConnectUrl = `steam://connect/${matchStats.serverIp}:${matchStats.serverPort}`;
 
-                // Try to open in new tab first, fallback to current window
-                try {
-                  window.open(steamUrl, "_blank");
-                } catch (error) {
-                  console.log(
-                    "Failed to open in new tab, trying current window:",
-                    error
-                  );
-                  window.location.href = steamUrl;
-                }
+                console.log("Attempting to connect to CS2 server:", {
+                  serverIp: matchStats.serverIp,
+                  serverPort: matchStats.serverPort,
+                  steamUrl,
+                  steamConnectUrl,
+                });
+
+                // Try multiple approaches to handle fullscreen game focus
+                const tryConnect = async () => {
+                  try {
+                    // First attempt: Try the run command (launches if not running, connects if running)
+                    console.log("Attempt 1: Using steam://run command");
+                    window.open(steamUrl, "_blank");
+
+                    // Wait a moment then try alternative approach
+                    setTimeout(() => {
+                      try {
+                        // Second attempt: Try direct connect (may work better with fullscreen)
+                        console.log("Attempt 2: Using steam://connect command");
+                        window.open(steamConnectUrl, "_blank");
+                      } catch (error) {
+                        console.log("Direct connect failed:", error);
+                        // Third attempt: Fallback to current window
+                        try {
+                          console.log("Attempt 3: Using current window");
+                          window.location.href = steamUrl;
+                        } catch (fallbackError) {
+                          console.error(
+                            "All connection attempts failed:",
+                            fallbackError
+                          );
+                          // Show user instructions
+                          alert(
+                            `Unable to automatically connect to CS2.\n\nPlease manually connect to:\n${matchStats.serverIp}:${matchStats.serverPort}\n\nIf CS2 is running in fullscreen, try:\n1. Alt+Tab to CS2\n2. Press F12 to open console\n3. Type: connect ${matchStats.serverIp}:${matchStats.serverPort}`
+                          );
+                        }
+                      }
+                    }, 1000);
+                  } catch (error) {
+                    console.log("Initial connection attempt failed:", error);
+                    // Try direct connect as fallback
+                    try {
+                      window.open(steamConnectUrl, "_blank");
+                    } catch (directError) {
+                      console.error("Direct connect also failed:", directError);
+                      window.location.href = steamUrl;
+                    }
+                  }
+                };
+
+                tryConnect();
               }}
               className="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
             >

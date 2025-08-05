@@ -37,17 +37,58 @@ const LiveMatches: React.FC = () => {
 
   const handleLaunchGame = (match: LiveMatch) => {
     if (match.serverIp && match.serverPort) {
-      // Use steam://connect to try connecting to already running CS2 first
-      // If CS2 is not running, it will launch it automatically
+      // Multiple approaches to handle fullscreen game focus issues
       const steamUrl = `steam://run/730//+connect ${match.serverIp}:${match.serverPort}`;
+      const steamConnectUrl = `steam://connect/${match.serverIp}:${match.serverPort}`;
 
-      // Try to open in new tab first, fallback to current window
-      try {
-        window.open(steamUrl, "_blank");
-      } catch (error) {
-        console.log("Failed to open in new tab, trying current window:", error);
-        window.location.href = steamUrl;
-      }
+      console.log("Attempting to connect to CS2 server:", {
+        serverIp: match.serverIp,
+        serverPort: match.serverPort,
+        steamUrl,
+        steamConnectUrl,
+      });
+
+      // Try multiple approaches to handle fullscreen game focus
+      const tryConnect = async () => {
+        try {
+          // First attempt: Try the run command (launches if not running, connects if running)
+          console.log("Attempt 1: Using steam://run command");
+          window.open(steamUrl, "_blank");
+
+          // Wait a moment then try alternative approach
+          setTimeout(() => {
+            try {
+              // Second attempt: Try direct connect (may work better with fullscreen)
+              console.log("Attempt 2: Using steam://connect command");
+              window.open(steamConnectUrl, "_blank");
+            } catch (error) {
+              console.log("Direct connect failed:", error);
+              // Third attempt: Fallback to current window
+              try {
+                console.log("Attempt 3: Using current window");
+                window.location.href = steamUrl;
+              } catch (fallbackError) {
+                console.error("All connection attempts failed:", fallbackError);
+                // Show user instructions
+                alert(
+                  `Unable to automatically connect to CS2.\n\nPlease manually connect to:\n${match.serverIp}:${match.serverPort}\n\nIf CS2 is running in fullscreen, try:\n1. Alt+Tab to CS2\n2. Press F12 to open console\n3. Type: connect ${match.serverIp}:${match.serverPort}`
+                );
+              }
+            }
+          }, 1000);
+        } catch (error) {
+          console.log("Initial connection attempt failed:", error);
+          // Try direct connect as fallback
+          try {
+            window.open(steamConnectUrl, "_blank");
+          } catch (directError) {
+            console.error("Direct connect also failed:", directError);
+            window.location.href = steamUrl;
+          }
+        }
+      };
+
+      tryConnect();
     }
   };
 
