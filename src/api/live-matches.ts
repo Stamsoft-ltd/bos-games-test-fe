@@ -62,7 +62,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 export async function getUserLiveMatches(
   token: string
 ): Promise<LiveMatchList> {
-  const response = await fetch(`${API_BASE_URL}/api/live-matches`, {
+  const response = await fetch(`${API_BASE_URL}/live-matches`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -84,7 +84,7 @@ export async function getLiveMatch(
   matchId: string,
   token: string
 ): Promise<LiveMatch> {
-  const response = await fetch(`${API_BASE_URL}/api/live-matches/${matchId}`, {
+  const response = await fetch(`${API_BASE_URL}/live-matches/${matchId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

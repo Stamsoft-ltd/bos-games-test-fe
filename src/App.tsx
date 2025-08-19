@@ -25,6 +25,8 @@ import SocialAuth from "./pages/SocialAuth";
 import HardwareProfile from "./pages/HardwareProfile";
 import LiveMatchPage from "./pages/LiveMatch";
 import LiveMatches from "./pages/LiveMatches";
+import MatchSelection from "./pages/MatchSelection";
+import MatchStatistics from "./pages/MatchStatistics";
 import {
   MapBanSession,
   getMapBanSession,
@@ -1390,6 +1392,12 @@ export default function App() {
                 Notifications
                 <NotificationBadge className="absolute -top-1 -right-1" />
               </Link>
+              <Link
+                to="/match-selection"
+                className="text-indigo-500 hover:underline"
+              >
+                📊 Match Statistics
+              </Link>
             </>
           ) : (
             <>
@@ -1423,6 +1431,11 @@ export default function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/live-matches" element={<LiveMatches />} />
           <Route path="/live-match/:matchId" element={<LiveMatchPage />} />
+          <Route path="/match-selection" element={<MatchSelection />} />
+          <Route
+            path="/match-statistics/:matchId"
+            element={<MatchStatistics />}
+          />
         </Routes>
       </main>
 
