@@ -17,6 +17,9 @@ export interface WeaponStats {
   shotsFired: number;
   shotsHit: number;
   accuracy: number;
+  headshots: number;
+  steamId?: string;
+  playerName?: string;
 }
 
 export interface MatchRound {
@@ -87,7 +90,15 @@ export interface MatchStatistics {
     utilityDamage: number;
     oneVsXAttempts: number;
     oneVsXWins: number;
-    weaponsUsed?: WeaponStats[];
+    plants: number;
+    defuses: number;
+    weaponStats?: Array<{
+      weapon: string;
+      shots: number;
+      hits: number;
+      accuracy: number;
+      headshots: number;
+    }>;
   }>;
   rounds: MatchRound[];
 }
@@ -100,10 +111,16 @@ export interface MatchListItem {
   endedAt: string | null;
   gameMode: {
     name: string;
+    requiresTeam: boolean;
+    playersPerTeam: number;
   };
   teams: Array<{
     name: string;
     score: number;
+  }>;
+  players?: Array<{
+    nickname: string;
+    teamNumber: number;
   }>;
 }
 

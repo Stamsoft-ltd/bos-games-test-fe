@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import {
   getMatchStatistics,
   getMatchRounds,
-  getMatchWeapons,
   MatchStatistics as MatchStatisticsType,
 } from "../api/match-statistics";
 
@@ -11,7 +10,7 @@ const MatchStatistics: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const [matchData, setMatchData] = useState<MatchStatisticsType | null>(null);
   const [roundsData, setRoundsData] = useState<any[]>([]);
-  const [weaponsData, setWeaponsData] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
@@ -31,15 +30,13 @@ const MatchStatistics: React.FC = () => {
         }
 
         // Fetch all data in parallel
-        const [matchData, roundsData, weaponsData] = await Promise.all([
+        const [matchData, roundsData] = await Promise.all([
           getMatchStatistics(matchId, token),
           getMatchRounds(matchId, token),
-          getMatchWeapons(matchId, token),
         ]);
 
         setMatchData(matchData);
         setRoundsData(roundsData);
-        setWeaponsData(weaponsData);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch match data"
@@ -92,8 +89,22 @@ const MatchStatistics: React.FC = () => {
   };
 
   const getTeamName = (teamNumber: number) => {
-    const team = matchData?.teams.find((t) => t.teamNumber === teamNumber);
-    return team?.name || `Team ${teamNumber}`;
+    // Check if this is a 1v1 match (no teams or single player per team)
+    const is1v1Match =
+      !matchData?.gameMode.requiresTeam ||
+      matchData?.gameMode.playersPerTeam === 1;
+
+    if (is1v1Match) {
+      // For 1v1 matches, use player names as team names
+      const player = matchData?.players.find(
+        (p) => p.teamNumber === teamNumber
+      );
+      return player?.nickname || `Player ${teamNumber}`;
+    } else {
+      // For team matches, use team names
+      const team = matchData?.teams.find((t) => t.teamNumber === teamNumber);
+      return team?.name || `Team ${teamNumber}`;
+    }
   };
 
   const getTeamPlayers = (teamNumber: number) => {
@@ -255,6 +266,12 @@ const MatchStatistics: React.FC = () => {
                         HS%
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Plants
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Defuses
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Rating
                       </th>
                     </tr>
@@ -307,6 +324,12 @@ const MatchStatistics: React.FC = () => {
                             player.headshotKills,
                             player.kills
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          {player.plants || 0}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          {player.defuses || 0}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
                           <span
@@ -362,6 +385,12 @@ const MatchStatistics: React.FC = () => {
                         HS%
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Plants
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Defuses
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Rating
                       </th>
                     </tr>
@@ -414,6 +443,12 @@ const MatchStatistics: React.FC = () => {
                             player.headshotKills,
                             player.kills
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          {player.plants || 0}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          {player.defuses || 0}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
                           <span
@@ -520,6 +555,11 @@ const MatchStatistics: React.FC = () => {
                           >
                             {round.winner || "N/A"}
                           </span>
+                          {round.winningTeam && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              {getTeamName(round.winningTeam)}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-gray-300">
                           {round.endReason || "N/A"}
@@ -565,7 +605,7 @@ const MatchStatistics: React.FC = () => {
 
         {activeTab === "weapons" && (
           <div className="space-y-6 px-6">
-            {weaponsData.length === 0 ? (
+            {!matchData?.players || matchData.players.length === 0 ? (
               <div className="bg-gray-800 rounded-lg p-6">
                 <h3 className="text-lg font-semibold mb-4">
                   Weapon Statistics
@@ -577,15 +617,10 @@ const MatchStatistics: React.FC = () => {
             ) : (
               matchData.players
                 ?.filter((player) => {
-                  const playerWeapons = weaponsData.filter(
-                    (weapon) => weapon.steamId === player.steamId
-                  );
-                  return playerWeapons.length > 0;
+                  return player.weaponStats && player.weaponStats.length > 0;
                 })
                 .map((player) => {
-                  const playerWeapons = weaponsData.filter(
-                    (weapon) => weapon.steamId === player.steamId
-                  );
+                  const playerWeapons = player.weaponStats || [];
 
                   return (
                     <div
@@ -607,7 +642,7 @@ const MatchStatistics: React.FC = () => {
                                 Weapon
                               </th>
                               <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                Kills
+                                Headshots
                               </th>
                               <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                                 Shots Fired
@@ -631,13 +666,13 @@ const MatchStatistics: React.FC = () => {
                                     {weapon.weapon}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
-                                    {weapon.kills}
+                                    {weapon.headshots}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
-                                    {weapon.shotsFired}
+                                    {weapon.shots}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
-                                    {weapon.shotsHit}
+                                    {weapon.hits}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     <span
@@ -675,10 +710,14 @@ const MatchStatistics: React.FC = () => {
         )}
 
         {activeTab === "duels" && (
-          <div className="px-6">
+          <div className="px-6 space-y-6">
+            {/* 1vX Duels Section */}
             <div className="bg-gray-800 rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-700">
-                <h3 className="text-lg font-semibold">Player Duels</h3>
+                <h3 className="text-lg font-semibold">1vX Duels</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  1vX attempts and success rates for each player
+                </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -688,22 +727,19 @@ const MatchStatistics: React.FC = () => {
                         Player
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        1v1 Attempts
+                        Team
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        1v1 Wins
+                        1vX Attempts
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        1vX Wins
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Win Rate
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Entry Attempts
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Entry Successes
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Entry Rate
+                        Score
                       </th>
                     </tr>
                   </thead>
@@ -714,9 +750,20 @@ const MatchStatistics: React.FC = () => {
                           {player.nickname}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.teamNumber === 1
+                                ? "bg-red-900/20 text-red-400"
+                                : "bg-blue-900/20 text-blue-400"
+                            }`}
+                          >
+                            {getTeamName(player.teamNumber)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-medium">
                           {player.oneVsXAttempts}
                         </td>
-                        <td className="px-4 py-3 text-center text-sm">
+                        <td className="px-4 py-3 text-center text-sm font-medium">
                           {player.oneVsXWins}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
@@ -742,9 +789,205 @@ const MatchStatistics: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
-                          {player.entryAttempts}
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.score > 0
+                                ? "bg-green-900/20 text-green-400"
+                                : player.score < 0
+                                ? "bg-red-900/20 text-red-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {player.score > 0 ? "+" : ""}
+                            {player.score}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Multi-Kill Statistics Section */}
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-700">
+                <h3 className="text-lg font-semibold">Multi-Kill Statistics</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  2ks, 3ks, 4ks, 5ks achievements for each player
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Player
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Team
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        2ks
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        3ks
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        4ks
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        5ks
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Total Multi-Kills
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {matchData.players?.map((player) => (
+                      <tr key={player.id} className="hover:bg-gray-700/50">
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {player.nickname}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.teamNumber === 1
+                                ? "bg-red-900/20 text-red-400"
+                                : "bg-blue-900/20 text-blue-400"
+                            }`}
+                          >
+                            {getTeamName(player.teamNumber)}
+                          </span>
+                        </td>
+                        {/* 2ks - Double Kills */}
+                        <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.doubleKills > 0
+                                ? "bg-green-900/20 text-green-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {player.doubleKills}
+                          </span>
+                        </td>
+                        {/* 3ks - Triple Kills */}
+                        <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.tripleKills > 0
+                                ? "bg-green-900/20 text-green-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {player.tripleKills}
+                          </span>
+                        </td>
+                        {/* 4ks - Quadra Kills */}
+                        <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.quadraKills > 0
+                                ? "bg-green-900/20 text-green-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {player.quadraKills}
+                          </span>
+                        </td>
+                        {/* 5ks - Penta Kills */}
+                        <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.pentaKills > 0
+                                ? "bg-green-900/20 text-green-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {player.pentaKills}
+                          </span>
+                        </td>
+                        {/* Total Multi-Kills */}
+                        <td className="px-4 py-3 text-center text-sm font-medium">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.doubleKills +
+                                player.tripleKills +
+                                player.quadraKills +
+                                player.pentaKills >
+                              0
+                                ? "bg-blue-900/20 text-blue-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {player.doubleKills +
+                              player.tripleKills +
+                              player.quadraKills +
+                              player.pentaKills}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Entry Duels Section */}
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-700">
+                <h3 className="text-lg font-semibold">Entry Duels</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  Entry attempts and success rates for each player
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Player
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Team
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Entry Attempts
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Entry Successes
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Success Rate
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        K/D Ratio
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {matchData.players?.map((player) => (
+                      <tr key={player.id} className="hover:bg-gray-700/50">
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {player.nickname}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.teamNumber === 1
+                                ? "bg-red-900/20 text-red-400"
+                                : "bg-blue-900/20 text-blue-400"
+                            }`}
+                          >
+                            {getTeamName(player.teamNumber)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-medium">
+                          {player.entryAttempts}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-medium">
                           {player.entrySuccesses}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
@@ -772,10 +1015,125 @@ const MatchStatistics: React.FC = () => {
                               : "N/A"}
                           </span>
                         </td>
+                        <td className="px-4 py-3 text-center text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              player.kills > player.deaths
+                                ? "bg-green-900/20 text-green-400"
+                                : player.kills < player.deaths
+                                ? "bg-red-900/20 text-red-400"
+                                : "bg-gray-900/20 text-gray-400"
+                            }`}
+                          >
+                            {calculateKDRatio(player.kills, player.deaths)}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Duels Summary */}
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Duels Summary</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-gray-400 text-sm">Total 1vX Attempts</p>
+                  <p className="text-white font-medium">
+                    {matchData.players?.reduce(
+                      (sum, player) => sum + player.oneVsXAttempts,
+                      0
+                    ) || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">Total 1vX Wins</p>
+                  <p className="text-white font-medium">
+                    {matchData.players?.reduce(
+                      (sum, player) => sum + player.oneVsXWins,
+                      0
+                    ) || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">Total Entry Attempts</p>
+                  <p className="text-white font-medium">
+                    {matchData.players?.reduce(
+                      (sum, player) => sum + player.entryAttempts,
+                      0
+                    ) || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">Total Entry Successes</p>
+                  <p className="text-white font-medium">
+                    {matchData.players?.reduce(
+                      (sum, player) => sum + player.entrySuccesses,
+                      0
+                    ) || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Multi-Kill Breakdown */}
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <h4 className="text-md font-semibold mb-3">
+                  Multi-Kill Breakdown
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div>
+                    <p className="text-gray-400 text-sm">2ks</p>
+                    <p className="text-white font-medium">
+                      {matchData.players?.reduce(
+                        (sum, player) => sum + player.doubleKills,
+                        0
+                      ) || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">3ks</p>
+                    <p className="text-white font-medium">
+                      {matchData.players?.reduce(
+                        (sum, player) => sum + player.tripleKills,
+                        0
+                      ) || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">4ks</p>
+                    <p className="text-white font-medium">
+                      {matchData.players?.reduce(
+                        (sum, player) => sum + player.quadraKills,
+                        0
+                      ) || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">5ks</p>
+                    <p className="text-white font-medium">
+                      {matchData.players?.reduce(
+                        (sum, player) => sum + player.pentaKills,
+                        0
+                      ) || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Total Multi-Kills</p>
+                    <p className="text-white font-medium">
+                      {matchData.players?.reduce(
+                        (sum, player) =>
+                          sum +
+                          player.doubleKills +
+                          player.tripleKills +
+                          player.quadraKills +
+                          player.pentaKills,
+                        0
+                      ) || 0}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

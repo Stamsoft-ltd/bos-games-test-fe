@@ -57,7 +57,28 @@ const MatchSelection: React.FC = () => {
     }
   };
 
-  const getScoreDisplay = (teams: Array<{ name: string; score: number }>) => {
+  const getScoreDisplay = (match: MatchListItem) => {
+    const { teams, players, gameMode } = match;
+
+    // Check if this is a 1v1 match
+    const is1v1Match = !gameMode.requiresTeam || gameMode.playersPerTeam === 1;
+
+    if (is1v1Match && players && players.length >= 2) {
+      // For 1v1 matches, use player names
+      const player1 = players.find((p) => p.teamNumber === 1);
+      const player2 = players.find((p) => p.teamNumber === 2);
+
+      // Backend now provides calculated scores for 1v1 matches
+      const team1Score = teams[0]?.score ?? 0;
+      const team2Score = teams[1]?.score ?? 0;
+
+      const player1Name = player1?.nickname || "Player 1";
+      const player2Name = player2?.nickname || "Player 2";
+
+      return `${player1Name} ${team1Score} - ${team2Score} ${player2Name}`;
+    }
+
+    // For team matches, use team names
     if (teams.length === 0) return "N/A";
     if (teams.length === 1) return `${teams[0].name}: ${teams[0].score}`;
     return `${teams[0].name} ${teams[0].score} - ${teams[1].score} ${teams[1].name}`;
@@ -140,7 +161,7 @@ const MatchSelection: React.FC = () => {
 
                           <div className="flex-1">
                             <h3 className="text-sm font-medium text-gray-900">
-                              {getScoreDisplay(match.teams)}
+                              {getScoreDisplay(match)}
                             </h3>
                             <p className="text-sm text-gray-500">
                               {match.gameMode.name} •{" "}
